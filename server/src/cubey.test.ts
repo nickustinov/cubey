@@ -292,6 +292,7 @@ test("its screen: when she asks or now and then by itself, it names what to show
   expect(prompt).toContain("now and then by yourself, to surprise her");
   expect(prompt).toContain("Set it as you begin drawing (when she asks, or says yes), not when you only offer to"); // it sent a cloud as it asked whether to
   expect(prompt).toContain("say you are drawing it"); // it said "here it is" seconds before
+  expect(prompt).toContain('Your screen has one colour, in a few shades: never offer, promise or name a colour for a drawing ("a house", not "a red house")'); // it offered a red house, over and over
   expect(prompt).toContain('Answer with JSON only: {"show": "<what you draw or write now, in English, or "">",'); // thought of first
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "live" })).not.toContain('"show"');
   expect(readAnswer(JSON.stringify({ show: " a cat ", say: "Zīmēju!" }))).toMatchObject({ show: "a cat" }); // no routine needed
