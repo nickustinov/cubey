@@ -52,26 +52,6 @@ describe("Transcriber", () => {
     stt.cancel();
   });
 
-  test("her pause: her words unchanged a moment; Soniox's punctuation and finalizing of the same words don't put it off", async () => {
-    server = Bun.serve({
-      port: 0,
-      fetch: (req, s) => (s.upgrade(req, { data: undefined }) ? undefined : new Response("no", { status: 403 })),
-      websocket: {
-        message(ws, msg) {
-          if (typeof msg !== "string" || !JSON.parse(msg).api_key) return;
-          ws.send(JSON.stringify({ tokens: [{ text: "Kāpēc", is_final: false }] }));
-          setTimeout(() => ws.send(JSON.stringify({ tokens: [{ text: "Kāpēc?", is_final: true }] })), 200); // the same word
-        },
-      },
-    });
-    const paused: string[] = [];
-    const stt = new Transcriber({ language: "lv", url: url(), onEnd: () => {}, onPause: (soFar) => paused.push(soFar) });
-    stt.send(new Uint8Array(640));
-    await Bun.sleep(420); // 300 ms after her word, not after its question mark
-    expect(paused).toEqual(["Kāpēc?"]);
-    stt.cancel();
-  });
-
   test("listens for another language she may speak too (the parrot's)", async () => {
     server = fakeStt([]);
     const stt = new Transcriber({ language: "lv", also: ["en"], url: url(), onEnd: () => {} });

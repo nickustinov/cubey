@@ -3,8 +3,8 @@
 // words to speech as they are written (Soniox's text-to-speech). Behind the device's protocol (session.ts), as on
 // Gemini Live (live.ts): "heard" at her pause, "said" when spoken, "interrupted" when she talked over it (the device's
 // own voice detector hears her over Cubey's echo, cancelled: Soniox heard what was left of Cubey as words of hers).
-// To answer sooner (pipecat's speculation gate): at a short pause in her words the model starts on its answer,
-// unspoken, and once Soniox hears her turn end in the same words that answer is spoken; if she went on, it is dropped.
+// The model is asked once Soniox hears her turn end: answers begun at a pause in her words (pipecat's speculation gate)
+// were seldom the ones spoken, and cost a third of the model's calls (2026-10-13).
 // Her word game (routine "lesson", lesson-game.ts) is a turn of the talk too: her words, her taps and her silence go to
 // the game, its pictures to the device, its words spoken in two languages; when she wants to stop (or the button stops
 // it), Cubey's usual talk takes her words.
@@ -33,21 +33,18 @@ export type Listener = { send(pcm: Uint8Array): void; finish(): Promise<string>;
 export type Voice = { say(text: string, language?: string): Promise<void>; end(): Promise<void>; cancel(): void };
 export type CascadeDeps = {
   history: { recent(child: string): Earlier[] };
-  // onHeard: her turn is over, or listening failed; onWords: what is heard so far; onPause: what is heard so far, once
-  // it hasn't changed for a moment; also: another language she may speak; waitMs: nothing said this long, her turn
-  // is over all the same, with nothing heard
-  listen: (opts: {
-    child: Child; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: (soFar: string) => void; also?: string[]; waitMs?: number;
-  }) => Listener;
+  // onHeard: her turn is over, or listening failed; onWords: what is heard so far; also: another language she may
+  // speak; waitMs: nothing said this long, her turn is over all the same, with nothing heard
+  listen: (opts: { child: Child; onHeard: () => void; onWords?: (soFar: string) => void; also?: string[]; waitMs?: number }) => Listener;
   // timestamps: whether to time what it says, asked with its first words; onCharacters: what it says as it times it
   speak: (opts: {
     voice: string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void;
     timestamps?: () => boolean; onCharacters?: (characters: string[], seconds: number[]) => void;
   }) => Voice;
   complete: Complete;
-  // A smarter model than the talk's, slower, for the games with words while she plays them (Flash-Lite praised words
-  // on the wrong letter); and one that draws and writes on Cubey's screen (Flash-Lite drew a poor cat, no sums).
-  smart: Complete;
+  // The games' model, while she plays a game with words; and the one that draws and writes on Cubey's screen: each as
+  // chosen on the admin page (models.ts).
+  games: Complete;
   draw: Complete;
   lessons: Lessons; // her word game
   log?: (line: string) => void; // how long each answer took
@@ -62,31 +59,6 @@ const withoutEcho = (text: string, echo: Set<string>) => {
   while (i < words.length && wordsOf(words[i]).every((w) => echo.has(w))) i++;
   return words.slice(i).join(" ");
 };
-const same = (a: string, b: string) => wordsOf(a).join(" ") === wordsOf(b).join(" ");
-
-// An answer written before her turn is sure to be over, held unspoken: the model's pieces kept, to be spoken if her
-// turn ends in the same words.
-class Early {
-  private pieces: string[] = [];
-  private follower?: (piece: string) => void;
-  readonly raw: Promise<string>;
-
-  constructor(readonly heard: string, write: (onText: (piece: string) => void) => Promise<string>) {
-    this.raw = write((piece) => {
-      this.pieces.push(piece);
-      this.follower?.(piece);
-    });
-    this.raw.catch(() => {}); // handled by whoever follows it
-  }
-
-  // Its pieces so far to onText, then the rest as they come; its whole answer.
-  follow(onText: (piece: string) => void): Promise<string> {
-    for (const piece of this.pieces) onText(piece);
-    this.follower = onText;
-    return this.raw;
-  }
-}
-
 // While Cubey speaks, the mic's last moment, kept: the device hears her voice a little after she starts (its detector
 // wants a moment of it, then the message travels), and her turn begins with it.
 const RECENT_BYTES = 16000 * 2; // a second at 16 kHz
@@ -105,7 +77,6 @@ class CascadeTalk implements Talk {
   private saying = new Set<string>(); // the words being spoken, which the mic hears back
   private messages: Message[] = []; // this talk so far
   private asked?: string; // what happened, while Cubey's answer to it is on its way
-  private early?: Early; // her turn's answer, written at her pause
   // Her word game, while she plays: the game (planned as it starts), the language it teaches, its exchanges, and
   // whether Cubey has asked once more after she said nothing (then it waits)
   private lesson?: { game: Promise<Game>; language: string; talk: Message[]; nudged: boolean };
@@ -137,9 +108,8 @@ class CascadeTalk implements Talk {
     this.hear();
   }
 
-  // Her turn: Soniox hears it to its end; at a pause in it the answer is begun (but in the word game, where it hears
-  // the language taught too, and ends her turn when she says nothing). echo: Cubey's words she talked over, left out
-  // of what she said before hers.
+  // Her turn: Soniox hears it to its end (in the word game, the language taught too, and her turn ends when she says
+  // nothing). echo: Cubey's words she talked over, left out of what she said before hers.
   // onWord: her first word, over Cubey's speech.
   private hear(echo?: Set<string>, onWord?: () => void): Listener {
     const lesson = this.lesson;
@@ -148,13 +118,6 @@ class CascadeTalk implements Talk {
       onHeard: () => void (this.listener === listener && this.heard(listener, this.generation, echo)),
       ...(onWord && { onWords: (soFar: string) => void (this.listener === listener && soFar.trim() && onWord()) }),
       ...(lesson && { also: [lesson.language], ...(!lesson.nudged && { waitMs: NUDGE_MS }) }),
-      onPause: lesson ? undefined : (soFar) => {
-        const asked = echo ? withoutEcho(soFar, echo) : soFar.trim();
-        if (this.listener !== listener || !asked) return;
-        const { system, messages } = this.prompt(asked);
-        const model = this.model();
-        this.early = new Early(asked, (onText) => model({ system, messages, onText, spent: this.spent })); // spent if dropped, too
-      },
     }));
     return listener;
   }
@@ -242,7 +205,6 @@ class CascadeTalk implements Talk {
     clearTimeout(this.doubted);
     this.doubted = undefined;
     this.generation++;
-    this.early = undefined;
     this.speech?.cancel();
     this.speech = undefined;
     this.out.text({ type: "interrupted" });
@@ -253,7 +215,6 @@ class CascadeTalk implements Talk {
     clearTimeout(this.doubted);
     this.doubted = undefined;
     this.generation++;
-    this.early = undefined;
     this.listener?.cancel();
     this.speech?.cancel();
     this.listener = this.speech = undefined;
@@ -277,15 +238,13 @@ class CascadeTalk implements Talk {
     }
     if (generation !== this.generation) return;
     if (this.lesson && (heard || !this.lesson.nudged)) return this.lessonTurn(heard ? { said: heard } : { quiet: true }, generation);
-    const early = this.early && same(this.early.heard, heard) ? this.early : undefined;
-    this.early = undefined;
     if (!heard) return this.out.text({ type: "said", heard: "", said: "", last: false });
-    await this.answer(heard, false, generation, listener.pauseMs, early);
+    await this.answer(heard, false, generation, listener.pauseMs);
   }
 
-  // The model for her turn: the smart one while she plays a game with words.
+  // The model for her turn: the games' one while she plays a game with words.
   private model(): Complete {
-    return this.playing === "chain" || this.playing === "letters" || this.playing === "spell" ? this.deps.smart : this.deps.complete;
+    return this.playing === "chain" || this.playing === "letters" || this.playing === "spell" ? this.deps.games : this.deps.complete;
   }
 
   // What Cubey shows on its screen, as its answer named it (as soon as it is written): drawn or written by the drawing
@@ -325,10 +284,9 @@ class CascadeTalk implements Talk {
     return { system, messages, battery };
   }
 
-  // Cubey's answer to her words, or to what happened (note: its hello, brushing, a timer): the model writes it (or
-  // wrote it at her pause: early), its words spoken as they come; then what it does on the device, the log, and
-  // "said" once all of it has played.
-  private async answer(asked: string, note: boolean, generation: number, pauseMs?: number, early?: Early) {
+  // Cubey's answer to her words, or to what happened (note: its hello, brushing, a timer): the model writes it, its
+  // words spoken as they come; then what it does on the device, the log, and "said" once all of it has played.
+  private async answer(asked: string, note: boolean, generation: number, pauseMs?: number) {
     const started = performance.now();
     const since = () => Math.round(performance.now() - started);
     let firstAudio = 0, spoken = "", said = Promise.resolve();
@@ -373,7 +331,7 @@ class CascadeTalk implements Talk {
     const say = (written: string) => (spelled(written), speak(written), sketch(written), fresh && (heard(written), theirs(written)));
     try {
       const { system, messages, battery } = this.prompt(asked);
-      const raw = await (early ? early.follow(say) : this.model()({ system, messages, onText: say, spent: this.spent }));
+      const raw = await this.model()({ system, messages, onText: say, spent: this.spent });
       if (generation !== this.generation) return;
       const written = since();
       const answer = readAnswer(raw, spoken);
@@ -413,7 +371,7 @@ class CascadeTalk implements Talk {
       if (letters) this.deps.log?.(`spelled ${letters.letters.join("")}: ${letters.found} of ${letters.letters.length} letters timed`);
       if (generation !== this.generation) return;
       this.speech = undefined;
-      this.deps.log?.(`answer: ${pauseMs ?? "-"} ms her pause, ${written} ms written${early ? " (begun at her pause)" : ""}, ${firstAudio} ms to its first sound`);
+      this.deps.log?.(`answer: ${pauseMs ?? "-"} ms her pause, ${written} ms written, ${firstAudio} ms to its first sound`);
       this.out.text({ type: "said", heard: note ? "" : asked, said: answer.said, last: answer.bye });
       if (this.once) this.closed = true; // a word once: nothing listens after it
     } catch (e) {

@@ -217,3 +217,11 @@ test("the words in braces are the target language, spoken in it; a cue goes with
   expect(spoken("Lieliski!", "lv", "en")).toEqual([{ text: "Lieliski!", language: "lv" }]);
   expect(idea("cat")?.picture).toBe("Cat");
 });
+
+test("the word game's prompt: its rules first, alike each step; this step, its words and what she answered, last", () => {
+  const a = prompt(), b = lessonPrompt({ child: anna, step: touch, before: teach, answered: { tapped: "dog", right: false, again: true }, language: "en", words, known: [] });
+  let same = 0;
+  while (a[same] === b[same]) same++;
+  expect(same).toBeGreaterThan(a.indexOf("No secrets, no promises"));
+  expect(a.indexOf("This exchange")).toBeGreaterThan(a.indexOf("Always"));
+});

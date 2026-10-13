@@ -11,7 +11,8 @@ import { picture } from "./curriculum";
 import { LessonProgress, LessonWords } from "./lesson";
 import { Lessons } from "./lesson-game";
 import { LIVE_MODEL, liveTalks } from "./live";
-import { completeWith, DRAW_MODEL, MODEL, SMART_MODEL } from "./llm";
+import { completeWith } from "./llm";
+import { type Job, Models } from "./models";
 import { Speaker, Transcriber } from "./soniox";
 import { DATA, openDb } from "./db";
 import { Fleet } from "./fleet";
@@ -35,15 +36,19 @@ if (TALK !== "cascade" && TALK !== "live") {
   console.error("CUBEY_TALK must be cascade or live (server/.env)");
   process.exit(1);
 }
-const keyFor = (model: string) => (model.startsWith("gpt-") ? "OPENAI_API_KEY" : "GEMINI_API_KEY");
-for (const key of TALK === "live" ? ["GEMINI_API_KEY"] : ["SONIOX_API_KEY", keyFor(MODEL), keyFor(SMART_MODEL), keyFor(DRAW_MODEL)])
-  if (!process.env[key]) {
-    console.error(`${key} is not set (server/.env)`);
-    process.exit(1);
-  }
-
 const log = (...args: unknown[]) => console.log(new Date().toLocaleTimeString("lv"), ...args);
 const db = openDb();
+// The models Cubey thinks with, each job's as chosen on the admin page: any of them needs its provider's key.
+const models = new Models(db);
+for (const [missing, why] of [
+  [!process.env.GEMINI_API_KEY && TALK === "live", "GEMINI_API_KEY is not set (server/.env): Gemini Live needs it"],
+  [!process.env.SONIOX_API_KEY && TALK === "cascade", "SONIOX_API_KEY is not set (server/.env)"],
+  [!models.usable() && TALK === "cascade", "Neither GEMINI_API_KEY nor OPENAI_API_KEY is set (server/.env): Cubey needs a model"],
+] as const)
+  if (missing) {
+    console.error(why);
+    process.exit(1);
+  }
 const history = new History(db), progress = new LessonProgress(db);
 const fleet = new Fleet(db, DATA, process.env.CUBEY_CHILD_TIMEZONE, [history, progress]);
 const spending = new Spending(db);
@@ -53,18 +58,19 @@ const wipe = (id: string) => {
   for (const ws of sockets.get(id) ?? []) ws.data.session?.close(), ws.send(JSON.stringify({ type: "reset" }));
 };
 const adminPage = admin({
-  password: process.env.CUBEY_ADMIN_PASSWORD, fleet, spending, wipe,
+  password: process.env.CUBEY_ADMIN_PASSWORD, fleet, spending, models, wipe,
   changed: (id) => sockets.get(id)?.forEach((ws) => ws.data.session?.sendSettings()), // its brightness, at once
 });
+const modelFor = (job: Job) => completeWith(() => models.model(job));
 const talks = TALK === "live"
   ? liveTalks({ history, log })
   : cascadeTalks({
-    history, log, complete: completeWith(MODEL), smart: completeWith(SMART_MODEL), draw: completeWith(DRAW_MODEL),
-    listen: ({ child, onHeard, onWords, onPause, also, waitMs }) =>
-      new Transcriber({ language: child.language, also, waitMs, terms: child.name ? [child.name] : [], onEnd: onHeard, onWords, onPause }),
+    history, log, complete: modelFor("talk"), games: modelFor("games"), draw: modelFor("drawing"),
+    listen: ({ child, onHeard, onWords, also, waitMs }) =>
+      new Transcriber({ language: child.language, also, waitMs, terms: child.name ? [child.name] : [], onEnd: onHeard, onWords }),
     speak: (opts) => new Speaker(opts),
     lessons: new Lessons({
-      progress, words: new LessonWords(db), complete: completeWith(SMART_MODEL), language: (child) => child.learns, picture,
+      progress, words: new LessonWords(db), complete: modelFor("games"), language: (child) => child.learns, picture,
     }),
   });
 
@@ -139,4 +145,4 @@ Bun.serve<Data>({
   },
 });
 
-log(`Cubey server on ${hostname}:${port} · ${TALK === "live" ? LIVE_MODEL : `Soniox and ${MODEL}, ${SMART_MODEL} for the games with words, ${DRAW_MODEL} drawing`}${TALK_OVER ? "" : " · no talking over"} · ${fleet.list().length} Cubeys known${process.env.CUBEY_ADMIN_PASSWORD ? " · /admin" : ""}`);
+log(`Cubey server on ${hostname}:${port} · ${TALK === "live" ? LIVE_MODEL : `Soniox and ${models.model("talk")}, ${models.model("games")} for the games with words, ${models.model("drawing")} drawing (the admin page's)`}${TALK_OVER ? "" : " · no talking over"} · ${fleet.list().length} Cubeys known${process.env.CUBEY_ADMIN_PASSWORD ? " · /admin" : ""}`);

@@ -12,7 +12,6 @@ primary_region = "fra"
 
 [env]
   HOST = "0.0.0.0"
-  CUBEY_MODEL = "gemini-3.5-flash-lite" # quicker than GPT-6 Sol on the board (2026-10-12)
   PORT = "8788"
   CUBEY_DATA = "/data"
 

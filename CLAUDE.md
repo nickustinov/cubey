@@ -22,7 +22,8 @@ server/                Bun + TypeScript: the talk, the models, the device protoc
   src/server.ts        HTTP and WebSocket entry point (/device, /admin, /health)
   src/session.ts       one connected device; the protocol is documented at the top
   src/talk.ts          what a talk is to the session, and routineMessage(): a routine as a device message
-  src/cascade.ts       the talk through Soniox (soniox.ts) and a model (llm.ts), answers begun early at the child's pause
+  src/cascade.ts       the talk through Soniox (soniox.ts) and a model (llm.ts)
+  src/models.ts        the models for each job (talk, games, drawing), chosen on the admin page
   src/live.ts          the talk on Gemini Live (tool calls, moving to a new connection on GoAway)
   src/cubey.ts         Cubey's prompt for either, reading its JSON answer, the drawing prompt
   src/spelling.ts      a word Cubey spells: its letters found in Soniox's timing of its speech
@@ -51,7 +52,7 @@ Requirements: macOS (the simulator uses AVAudioEngine), Homebrew, [Bun](https://
 
 ```sh
 brew install cmake ninja sdl2
-cp server/.env.example server/.env        # fill in SONIOX_API_KEY and OPENAI_API_KEY at least
+cp server/.env.example server/.env        # fill in SONIOX_API_KEY, and GEMINI_API_KEY or OPENAI_API_KEY
 cd server && bun install
 ```
 

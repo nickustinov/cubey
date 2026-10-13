@@ -352,3 +352,19 @@ test("its letter, as the game shows it: one letter, small", () => {
   expect(letters("7")?.letter).toBeUndefined();
   expect(letters(undefined)?.letter).toBeUndefined();
 });
+
+// Caching: a model's cache holds only the start that requests share (2026-10-13: Gemini cached nothing, the time of day
+// on the prompt's second line).
+test("what changes turn by turn comes last, after the rules and the talks before, which are the same each turn", () => {
+  const earlier = "Your talks with Anna before this one: …";
+  const first = cubeyPrompt(anna, { earlier, now: evening, mode: "cascade", battery: { percent: 73, charging: false } });
+  const later = cubeyPrompt(anna, {
+    earlier, now: new Date(evening.getTime() + 3600_000), mode: "cascade", battery: { percent: 40, charging: true },
+    playing: "chain", needed: "s", heard: "suns", used: ["kaķis"], screen: "a cat, drawn",
+  });
+  let same = 0;
+  while (first[same] === later[same]) same++;
+  expect(same).toBeGreaterThan(first.indexOf(earlier) + earlier.length);
+  expect(first.indexOf("For you to know, not to say: it is")).toBeGreaterThan(first.indexOf(earlier));
+  expect(later.indexOf("Now: a word chain")).toBeGreaterThan(later.indexOf(earlier));
+});

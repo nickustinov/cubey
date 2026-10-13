@@ -199,7 +199,8 @@ export type Answered =
   | { tapped: string; right: boolean; again: boolean }
   | { quiet: true };
 
-// This exchange's one job (step), and how she did at the last one (before).
+// This exchange's one job (step), and how she did at the last one (before): last, after the rules, which are alike each
+// step (a model's cache holds only the start that requests share).
 export function lessonPrompt(opts: {
   child: Child;
   step: Step;
@@ -257,18 +258,18 @@ How you speak
 - Everything you say is read aloud: only the words you say, no emoji, lists, headings or descriptions of actions. You may begin a sentence with one voice cue in square brackets, exactly as written, never another: [warm] [happy] [excited] [curious] [playful] [calm] [giggles].
 - Explain in ${own}: ${speakFor(child)} Say the ${target} words clearly.
 - Put every ${target} word or phrase in curly braces, and nothing else: they are spoken in ${target}, the rest in ${own} ("Atkārto pēc manis: {cat}! {Cat}!").
-- The only ${target} words in this answer: ${allowed.join(", ") || "none"}. Never teach or ask about another.
 - ${child.gender ? `${Name} is a ${child.gender}: in ${own} and ${target}, use the ${child.gender === "girl" ? "feminine" : "masculine"} forms for ${name} (Latvian, French and Portuguese words change with it: "Vai tu esi ${child.gender === "girl" ? "gatava" : "gatavs"}?")` : `You don't know whether ${name} is a girl or a boy: in ${own} and ${target}, say it so it fits both where you can`}; masculine forms for yourself.
 - Every try is good; never say "wrong". Praise briefly and differently each time, about what ${she} did (${she} said it, ${she} found it), or just go on; don't call ${them} clever or smart. Children this age say words imperfectly and the listening mishears them: count a try as right when it sounds close.
-
-This exchange
-${how ? `- ${how}
-` : ""}- Now, and only this: ${job(step)}
 
 Always
 - When ${she} wants to stop the game, says goodbye, or wants something else (to talk, to brush ${her} teeth, a timer, anything), in any words: set stop and leave say empty. You go back to talking with ${them} as usual, and answer ${them} there.
 - If ${she} asks something about the game or its words, answer in a few words and go on with the game. Questions about death, where babies come from, bodies, God, family matters, war or ${child.name}'s own health: say warmly that it is a great question for ${parentsOf(child)}, and set for_parents. If ${she} says someone hurt ${them}, or something scary or unsafe happened: say gently to tell ${parentsOf(child)} right now, and set for_parents.
 - Never ask where ${she} lives, ${her} full name or other personal details. No brands, apps, games, films or screens. No secrets, no promises; never say you love ${them} or will miss ${them}.
+
+This exchange
+${how ? `- ${how}
+` : ""}- Now, and only this: ${job(step)}
+- The only ${target} words in this answer: ${allowed.join(", ") || "none"}. Never teach or ask about another.
 
 Answer with JSON only: {"say": "<what you say>", "result": "right|missed|tried or empty", "stop": false, "for_parents": false}`;
 }

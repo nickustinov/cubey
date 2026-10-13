@@ -54,13 +54,17 @@ test("OpenAI's answer through Cubey's model, without JSON mode: it waited 180 ms
   }) as unknown as typeof fetch;
   try {
     const spent: object[] = [];
-    expect(await completeWith("gpt-6-sol")({ system: "Answer with JSON only.", messages: [{ role: "user", text: "Čau" }], spent: (s) => spent.push(s) })).toBe('{"say": "Čau!"}');
+    let model = "gpt-6-sol";
+    const complete = completeWith(() => model);
+    expect(await complete({ system: "Answer with JSON only.", messages: [{ role: "user", text: "Čau" }], spent: (s) => spent.push(s) })).toBe('{"say": "Čau!"}');
     expect(body.response_format).toBeUndefined();
     expect(body.stream_options).toEqual({ include_usage: true }); // what it cost, for the admin page
     expect(spent).toEqual([{ what: "think", model: "gpt-6-sol", input: 900, cached: 0, output: 12 }]);
     expect(body.reasoning_effort).toBe("none");
-    await completeWith("gpt-6-astra")({ system: "", messages: [{ role: "user", text: "Kaķis" }] });
+    model = "gpt-6-astra"; // chosen on the admin page since: its next call is that one's
+    await complete({ system: "", messages: [{ role: "user", text: "Kaķis" }], spent: (s) => spent.push(s) });
     expect(body.reasoning_effort).toBe("low"); // its least: it takes no "none"
+    expect(spent.at(-1)).toMatchObject({ model: "gpt-6-astra" });
   } finally {
     globalThis.fetch = fetched;
   }

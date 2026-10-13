@@ -21,9 +21,9 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   const texts: any[] = [];
   const exchanges: Exchanged[] = [];
   let audio = 0;
-  const asked: { system: string; messages: { role: string; text: string }[]; model: "talk" | "smart" | "draw" }[] = [];
+  const asked: { system: string; messages: { role: string; text: string }[]; model: "talk" | "games" | "draw" }[] = [];
   const spent: Spent[] = [];
-  const model = (name: "talk" | "smart" | "draw"): CascadeDeps["complete"] => async ({ system, messages, onText, spent: spend }) => {
+  const model = (name: "talk" | "games" | "draw"): CascadeDeps["complete"] => async ({ system, messages, onText, spent: spend }) => {
     asked.push({ system, messages: [...messages], model: name });
     spend?.({ what: "think", model: name, input: 100, output: 10 });
     const raw = answers.shift();
@@ -33,7 +33,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     return raw;
   };
   const listeners: {
-    pcm: number; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: (soFar: string) => void; text: string; cancelled: boolean;
+    pcm: number; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: unknown; text: string; cancelled: boolean;
     also?: string[]; waitMs?: number;
   }[] = [];
   const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number; timed: boolean }[] = [];
@@ -43,8 +43,9 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   const logged: string[] = [];
   const deps: CascadeDeps = {
     history: { recent: () => before },
-    listen: ({ onHeard, onWords, onPause, also, waitMs }) => {
-      const l = { pcm: 0, onHeard, onWords, onPause, text: heardNext, cancelled: false, also, waitMs };
+    listen: (opts) => {
+      const { onHeard, onWords, also, waitMs } = opts;
+      const l = { pcm: 0, onHeard, onWords, onPause: (opts as { onPause?: unknown }).onPause, text: heardNext, cancelled: false, also, waitMs };
       listeners.push(l);
       return { send: (pcm) => void (l.pcm += pcm.length), finish: async () => l.text, cancel: () => void (l.cancelled = true) };
     },
@@ -64,7 +65,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
       };
     },
     complete: model("talk"),
-    smart: model("smart"),
+    games: model("games"),
     draw: model("draw"),
     lessons: undefined as unknown as Lessons, // below: it shares the model
     log: (line) => void logged.push(line),
@@ -96,17 +97,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     await Bun.sleep(5);
   };
   const types = () => texts.map((t) => t.type);
-  // She pauses a moment mid-turn with these words heard so far, then Soniox hears the end of her turn with `final`.
-  const pause = async (soFar: string, final = soFar, ...answer: string[]) => {
-    answers.push(...answer);
-    heardNext = final;
-    live.listen();
-    const l = listeners.at(-1)!;
-    l.onPause?.(soFar);
-    await Bun.sleep(5);
-    return { end: async () => (l.onHeard(), await Bun.sleep(5)) };
-  };
-  return { live, ask, pause, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, logged };
+  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, logged };
 }
 
 test("Cubey's hello: the model is told what happened, in Cubey's prompt with its battery, and its words are spoken as written", async () => {
@@ -131,7 +122,7 @@ test("going on after a lost connection, no hello; what happened instead of her w
   expect(done.asked[0].messages).toEqual([{ role: "user", text: "(The timer for cartoons is over.)" }]);
 });
 
-test("she talks: the device listens, her mic goes to Soniox; at her pause the model gets the talk so far and her words", async () => {
+test("she talks: the device listens, her mic goes to Soniox; once her turn is over the model gets the talk so far and her words", async () => {
   const t = await talk();
   await t.ask("Kāpēc debesis ir zilas?", json("Jo saule izkliedē zilo."));
   expect(t.types()).toEqual(["said", "listening", "heard", "said"]);
@@ -272,25 +263,13 @@ test("a model that fails, or writes nothing usable: the turn fails, and the devi
   expect(t.texts.at(-1)).toMatchObject({ type: "failed" });
 });
 
-test("at her pause Cubey starts on its answer, unspoken; once Soniox hears her turn end in the same words, that answer is spoken", async () => {
+// Answers begun at her pause, before her turn ended, were seldom the ones spoken, and cost a third of the model's
+// calls (2026-10-13).
+test("the model is asked once her turn is over, never before: nothing listens for her pauses", async () => {
   const t = await talk();
-  const her = await t.pause("Kāpēc debesis ir zilas", "Kāpēc debesis ir zilas?", json("Jo saule izkliedē zilo."));
-  expect(t.asked.length).toBe(2); // written already
-  expect(t.types()).toEqual(["said", "listening"]); // not spoken yet
-  await her.end();
-  expect(t.asked.length).toBe(2); // not asked again
-  expect(t.texts.at(-1)).toEqual({ type: "said", heard: "Kāpēc debesis ir zilas?", said: "Jo saule izkliedē zilo.", last: false });
-  expect(t.voices.at(-1)!.said.join("")).toBe("Jo saule izkliedē zilo.");
-});
-
-test("her turn ending in other words than at her pause (she went on): the early answer is dropped, and Cubey answers what she said", async () => {
-  const t = await talk();
-  const her = await t.pause("Kāpēc debesis", "Kāpēc debesis ir zilas?", json("Debesis ir lielas."), json("Jo saule izkliedē zilo."));
-  await her.end();
-  expect(t.asked.length).toBe(3);
-  expect(t.asked.at(-1)!.messages.at(-1)).toEqual({ role: "user", text: "Kāpēc debesis ir zilas?" });
-  expect(t.texts.at(-1)).toMatchObject({ said: "Jo saule izkliedē zilo." });
-  expect(t.voices.at(-1)!.said.join("")).toBe("Jo saule izkliedē zilo.");
+  await t.ask("Kāpēc debesis ir zilas?", json("Jo saule izkliedē zilo."));
+  expect(t.listeners.every((l) => !l.onPause)).toBe(true);
+  expect(t.asked.length).toBe(2); // the hello, and her turn
 });
 
 const step = (say: string, extra: object = {}) => JSON.stringify({ say, result: "", stop: false, for_parents: false, ...extra });
@@ -500,15 +479,15 @@ test("what she tells Cubey of herself is kept, and the talk goes on with it: cal
   expect(t.learned).toHaveLength(1);
 });
 
-test("the games with words are the smart model's while she plays them; the talk, and the turn that starts one, the quick one's", async () => {
+test("the games with words are the games' model's while she plays them; the talk, and the turn that starts one, the quick one's", async () => {
   const t = await talk();
   expect(t.asked.at(-1)!.model).toBe("talk"); // the hello
   await t.ask("Spēlēsim vārdu ķēdi!", json("Vāvere! Tev uz E!", { routine: "chain", word: "vāvere" }));
   expect(t.asked.at(-1)!.model).toBe("talk");
   await t.ask("Egle", json("Egle! Man: ezis.", { routine: "chain", hers: "egle", word: "ezis" }));
-  expect(t.asked.at(-1)!.model).toBe("smart");
+  expect(t.asked.at(-1)!.model).toBe("games");
   await t.ask("Pietiek", json("Labi!"));
-  expect(t.asked.at(-1)!.model).toBe("smart"); // still in the game as she said it
+  expect(t.asked.at(-1)!.model).toBe("games"); // still in the game as she said it
   await t.ask("Kāpēc?", json("Tāpēc."));
   expect(t.asked.at(-1)!.model).toBe("talk");
   await t.ask("Skaitīsim punktus!", json("Cik?", { routine: "count", number: 3 }));
@@ -553,7 +532,7 @@ test("spelling a word: the server spells it to the device before Cubey speaks, t
   ]);
   expect(t.logged).toContain("spelled kaķis: 5 of 5 letters timed"); // to see on the board's server whether Soniox's timing finds them
   await t.ask("Un suns?", JSON.stringify({ spell: "suns jā", say: "Suns: s, u, n, s.", routine: "spell" }));
-  expect(t.asked.at(-1)!.model).toBe("smart"); // a game with words, while she plays it
+  expect(t.asked.at(-1)!.model).toBe("games"); // a game with words, while she plays it
   expect(t.asked.at(-1)!.system).toContain("Now: spelling words");
   expect(t.texts).toContainEqual({ type: "spell", word: "suns" }); // one word
   await t.ask("Pietiek!", json("Labi!"));

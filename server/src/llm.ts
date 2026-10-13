@@ -1,17 +1,13 @@
-// The model behind Cubey's answers when it hears through Soniox (cascade.ts), streaming, thinking off: OpenAI's GPT-6
-// Sol, or Gemini (CUBEY_MODEL=gemini-…). On Cubey's prompt and her real turns (2026-10-11) Sol's first word came 0.3 s
-// after Gemini 3.1 Flash-Lite's, as good in Latvian, but it handed her cough to her parents and kept the word chain's
-// rules, where Flash-Lite praised every word on a wrong letter; Haiku 5.5's Latvian was poor, 3.8 Flash took 2 s.
+// A model behind Cubey's answers when it hears through Soniox (cascade.ts), streaming, thinking off: OpenAI's or
+// Gemini's, each job's as chosen on the admin page (models.ts). On Cubey's prompt and her real turns (2026-10-11) GPT-6
+// Sol's first word came 0.3 s after Gemini 3.1 Flash-Lite's, as good in Latvian, but it handed her cough to her parents
+// and kept the word chain's rules, where Flash-Lite praised every word on a wrong letter; Haiku 5.5's Latvian was poor,
+// 3.8 Flash took 2 s. Of ten models drawing ten things on its 24 by 24 dots (2026-10-12), GPT-6 Astra's were the best
+// (in about 6 s); GPT-6 Sol drew a heart for a fish, Flash-Lite a blob for a cat.
 // Gemini's terms forbid apps used by under-18s: an open question before any child talks to Cubey (docs/design.md).
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { Spent } from "./prices";
 
-export const MODEL = process.env.CUBEY_MODEL ?? "gpt-6-sol";
-// The smarter one, for the games with words (cascade.ts): GPT-6 Sol unless CUBEY_SMART_MODEL says. And the one that
-// draws on Cubey's screen: of ten models drawing ten things on its 24 by 24 dots (2026-10-12), GPT-6 Astra's were the
-// best (in about 6 s); GPT-6 Sol drew a heart for a fish, Flash-Lite a blob for a cat.
-export const SMART_MODEL = process.env.CUBEY_SMART_MODEL ?? "gpt-6-sol";
-export const DRAW_MODEL = process.env.CUBEY_DRAW_MODEL ?? "gpt-6-astra";
 // How little OpenAI's models may reason: none, but for those that take no "none".
 const LEAST_EFFORT: Record<string, string> = { "gpt-6-astra": "low", "gpt-6.1-sol": "low" };
 
@@ -111,11 +107,13 @@ export async function retried<T>(attempt: () => Promise<T>, delays = RETRY_DELAY
   }
 }
 
-export function completeWith(model: string): Complete {
+// The model as `model` says at each call: a choice on the admin page counts from the next turn.
+export function completeWith(model: () => string): Complete {
   return ({ system, messages, onText, spent }) => {
+    const id = model();
     let written = false;
     const write = onText && ((text: string) => ((written = true), onText(text)));
-    const ask = model.startsWith("gpt-") ? openai : flash;
-    return retried(() => ask(model, system, messages, write, spent && ((t) => spent({ what: "think", model, ...t }))), RETRY_DELAYS, undefined, () => !written);
+    const ask = id.startsWith("gpt-") ? openai : flash;
+    return retried(() => ask(id, system, messages, write, spent && ((t) => spent({ what: "think", model: id, ...t }))), RETRY_DELAYS, undefined, () => !written);
   };
 }

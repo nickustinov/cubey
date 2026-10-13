@@ -35,32 +35,26 @@ function opened(ws: WebSocket): Promise<void> {
 // after the last word; its "lower latency" levels waited longer (1,040–1,320 ms). Children pause mid-sentence: a
 // longer wait, or endpoint_sensitivity below 0, if it cuts her off.
 const ENDPOINT = { max_endpoint_delay_ms: 1000 };
-// Her words unchanged this long, she has paused: a moment to start on the answer before her turn is sure to be over
-// (cascade.ts); Soniox still decides when it is.
-const SETTLED_MS = 300;
 
 // One utterance: connect when listening starts, stream PCM, finish() for the text. Soniox listens for the
 // child to stop: onEnd is called once when she stops after saying something, or when the utterance fails
 // (finish() then rejects with the reason). also: other languages she may speak (the parrot's). waitMs: if
 // she says nothing this long, the utterance ends anyway, with nothing heard. onWords: what is heard so far, the
-// guess included, each time it changes; onPause: what is heard so far once it hasn't changed for SETTLED_MS.
+// guess included, each time it changes.
 export class Transcriber {
   private ws: WebSocket;
   private ready: Promise<void>;
   private text = "";
-  private words = ""; // what is heard so far, words only
   private done = Promise.withResolvers<string>();
   private ended = false;
   private endpointed = false;
   private heardSoFar = "";
-  private settling?: ReturnType<typeof setTimeout>;
   private sentMs = 0; // her audio sent so far
   private lastWordEnd = 0; // where in it her last word ended, as Soniox heard it
   pauseMs = 0; // how long Soniox waited after the last word before it called the pause
 
   constructor(private opts: {
-    language: string; also?: string[]; terms?: string[]; waitMs?: number; onEnd: () => void; onWords?: (soFar: string) => void;
-    onPause?: (soFar: string) => void; url?: string;
+    language: string; also?: string[]; terms?: string[]; waitMs?: number; onEnd: () => void; onWords?: (soFar: string) => void; url?: string;
   }) {
     this.ws = new WebSocket(opts.url ?? STT_URL);
     this.ready = opened(this.ws).then(() => {
@@ -104,14 +98,6 @@ export class Transcriber {
       if (this.text + guess !== this.heardSoFar) {
         this.heardSoFar = this.text + guess;
         this.opts.onWords?.(this.heardSoFar);
-        // Her pause counts from her words: Soniox's punctuation and finalizing of the same words put it off until her
-        // turn was over, and the answer begun at it was hardly ever used (2026-10-11).
-        const words = wordsOf(this.heardSoFar).join(" ");
-        if (words !== this.words) {
-          this.words = words;
-          clearTimeout(this.settling);
-          if (this.opts.onPause && words) this.settling = setTimeout(() => !this.ended && this.opts.onPause?.(this.heardSoFar), SETTLED_MS);
-        }
       }
     });
   }
@@ -140,12 +126,10 @@ export class Transcriber {
 
   cancel() {
     this.ended = true;
-    clearTimeout(this.settling);
     this.ws.close();
   }
 
   private end() {
-    clearTimeout(this.settling);
     if (this.ended) return;
     this.ended = true;
     this.opts.onEnd();

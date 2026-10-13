@@ -1,5 +1,6 @@
 // The admin page, for a grown-up, on the server itself (no app): /admin, behind CUBEY_ADMIN_PASSWORD (none: no page).
-// The Cubeys: each one's child, whether it is online or when it was last seen, what it cost (spending.ts), and where the
+// The models Cubey thinks with, one for each job (models.ts); the Cubeys: each one's child, whether it is online or when
+// it was last seen, what it cost (spending.ts), and where the
 // money goes (graphs by day, by Cubey and by kind, drawn here as SVG: no script on the page); a Cubey's
 // page: its talks (its parents' log), its child and settings to change, its name, blocking it, a full reset. The password once, then
 // a cookie only the server can make (an HMAC of the password), HttpOnly, Secure, SameSite=Strict, for 30 days.
@@ -7,11 +8,12 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ageOf, type Child, LANGUAGE_NAMES, LANGUAGES, PARENTS, THEMES } from "./child";
 import type { Device, Fleet } from "./fleet";
 import { LESSON_LANGUAGES, languageName } from "./lesson";
+import { type Job, JOBS, MODELS, type Models } from "./models";
 import type { Spend, Spending, Spends } from "./spending";
 
 // wipe: tells a Cubey that is on to wipe itself; changed: tells it its settings anew (server.ts)
 type Deps = {
-  password?: string; fleet: Fleet; spending: Spending; wipe?: (id: string) => void; changed?: (id: string) => void; now?: () => Date;
+  password?: string; fleet: Fleet; spending: Spending; models: Models; wipe?: (id: string) => void; changed?: (id: string) => void; now?: () => Date;
   wait?: (ms: number) => Promise<void>;
 };
 
@@ -113,13 +115,40 @@ function byRow(rows: { label: string; parts: { kind: Kind; usd: number }[] }[]):
 
 const millions = (n: number) => (n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${Math.round(n / 1e3)}k` : String(n));
 
+const JOB_NAMES: Record<Job, string> = { talk: "Talk", games: "Games", drawing: "Drawing" };
+
 export function admin(deps: Deps): (req: Request) => Promise<Response> {
-  const { fleet, spending } = deps;
+  const { fleet, spending, models } = deps;
   const now = () => deps.now?.() ?? new Date();
   const ticket = deps.password && createHmac("sha256", deps.password).update("cubey admin").digest("hex");
   const signedIn = (req: Request) => {
     const sent = (req.headers.get("cookie") ?? "").split(/;\s*/).find((c) => c.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
     return !!ticket && !!sent && same(sent, ticket);
+  };
+
+  // A dropdown for each job, the model it uses now picked, those without their key greyed out; saved as one is picked
+  // (or with Keep). A chosen model whose key is gone: which one works instead.
+  const modelsForm = () => {
+    const nameOf = (id: string) => MODELS.find((m) => m.id === id)?.name ?? id;
+    const rows = JOBS.map((job) => {
+      const used = models.model(job), chosen = models.chosen(job);
+      const options = models.offered(job).map(({ model, available }) =>
+        `<option value="${h(model.id)}"${!available ? " disabled" : model.id === used ? " selected" : ""}>${h(model.name)}${available ? "" : ` (needs ${model.key})`}</option>`);
+      const lost = chosen && chosen !== used ? MODELS.find((m) => m.id === chosen) : undefined;
+      const note = lost ? `<div class="dim">${h(lost.name)} needs ${lost.key}: ${h(nameOf(used))} instead</div>` : "";
+      return `<label>${JOB_NAMES[job]}</label><div><select name="${job}" onchange="this.form.submit()">${options.join("")}</select>${note}</div>`;
+    });
+    return `<h2>Models</h2><form method="post" action="/admin/models" class="card grid">${rows.join("")}<span></span><p><button>Keep</button></p></form>`;
+  };
+
+  // The form sends every job's: only a change is kept, so a default stays one, following the keys.
+  const chooseModels = async (req: Request) => {
+    const form = await req.formData();
+    for (const job of JOBS) {
+      const id = String(form.get(job) ?? "");
+      if (id && id !== models.model(job)) models.choose(job, id);
+    }
+    return redirect("/admin");
   };
 
   const list = () => {
@@ -133,7 +162,8 @@ export function admin(deps: Deps): (req: Request) => Promise<Response> {
     });
     return page("Cubeys", `<div class="row"><h1>Cubeys</h1><form method="post" action="/admin/logout"><button>Out</button></form></div>
 <p class="dim">All of them: ${spendsLine(spending.of(undefined, now()))} · <a href="/admin/spending">where it goes</a></p>${cards.join("") || '<p class="dim">None yet: a Cubey shows here once it has met the server.</p>'}
-<p class="dim">A new Cubey: flash it, join it to Wi-Fi on its own screens (“+” held 5 s), and it is here; it gets to know its child by talking.</p>`);
+<p class="dim">A new Cubey: flash it, join it to Wi-Fi on its own screens (“+” held 5 s), and it is here; it gets to know its child by talking.</p>
+${modelsForm()}`);
   };
 
   // Where the money goes, the last so many days (UTC): by day, by Cubey, by kind, and a table of what was used.
@@ -235,6 +265,7 @@ export function admin(deps: Deps): (req: Request) => Promise<Response> {
     if (!signedIn(req)) return req.method === "POST" ? redirect("/admin") : login();
     if (req.method === "POST" && path === "/admin/logout") return redirect("/admin", { "set-cookie": `${COOKIE}=; Path=/admin; Max-Age=0; HttpOnly; Secure; SameSite=Strict` });
     if (path === "/admin") return list();
+    if (req.method === "POST" && path === "/admin/models") return chooseModels(req);
     if (path === "/admin/spending") return where(Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get("days")) || 30)));
     const reset = /^\/admin\/d\/([a-z0-9]{1,32})\/reset$/i.exec(path)?.[1];
     if (reset && req.method === "POST") return deps.wipe?.(reset), fleet.forget(reset), redirect("/admin");

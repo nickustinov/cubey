@@ -106,7 +106,7 @@ Cubey sleeps after half a minute of quiet, and after 45 s without its server.
 
 - **The cube** streams the microphone to the server, plays Cubey's voice and draws everything on a 24 by 24 board of dots: the eyes, a timer's dial, a die, letters, drawings. It cancels its own echo, so the child can talk over Cubey.
 - **The server** hears the child through Soniox. A model writes Cubey's answer as JSON: what it says, plus a goodbye, a question for the parents, or a routine to start. The words are spoken by Soniox's voice as they're written, so Cubey starts speaking before the answer is finished. Each routine becomes a message the cube turns into a screen.
-- **Different models for different jobs**: a quick one for the talk, a more careful one for the games with words and the word game (exact letters matter), and the best drawer for pictures.
+- **A model for each job**, chosen on the admin page: one for the talk, one for the games with words and the word game, one for drawing. By default Gemini 3.5 Flash-Lite, the quickest and cheapest, and GPT-6 Astra for drawing when there's an OpenAI key.
 
 The reasoning behind each choice is in [docs/design.md](docs/design.md).
 
@@ -118,8 +118,7 @@ The reasoning behind each choice is in [docs/design.md](docs/design.md).
 - [Bun](https://bun.sh) 1.4 or later
 - API keys:
   - [Soniox](https://soniox.com): speech to text and text to speech.
-  - [OpenAI](https://platform.openai.com): the default models for the talk (GPT-6 Sol) and drawing (GPT-6 Astra).
-  - [Gemini](https://aistudio.google.com), optional: speech to speech on Gemini Live (`CUBEY_TALK=live`), or Gemini models for the talk.
+  - [Gemini](https://aistudio.google.com) or [OpenAI](https://platform.openai.com), or both: the models Cubey thinks with. Gemini gives Gemini 3.5 Flash-Lite (the default) and speech to speech on Gemini Live (`CUBEY_TALK=live`); OpenAI gives GPT-6 Sol, GPT-6.1 Sol and GPT-6 Astra (the best at drawing).
 
 **To build a cube:**
 
@@ -136,7 +135,7 @@ All the providers bill per use. The admin page shows what each Cubey costs, by d
 
 ```sh
 git clone https://github.com/nickustinov/cubey.git && cd cubey
-cp server/.env.example server/.env          # add SONIOX_API_KEY and OPENAI_API_KEY
+cp server/.env.example server/.env          # add SONIOX_API_KEY, and GEMINI_API_KEY or OPENAI_API_KEY
 cd server && bun install && bun run dev     # the server, on ws://127.0.0.1:8788/device
 ```
 
@@ -164,7 +163,7 @@ fly secrets set SONIOX_API_KEY=… OPENAI_API_KEY=… GEMINI_API_KEY=… \
 fly deploy
 ```
 
-`fly.toml` runs the talk on Gemini 3.5 Flash-Lite (`CUBEY_MODEL`), the quickest on the cube, so it needs `GEMINI_API_KEY`. Remove that line to use the default, GPT-6 Sol. Your cubes then connect to `wss://<your-app>.fly.dev/device`, and the admin page is at `https://<your-app>.fly.dev/admin`.
+Set the provider keys you have: `GEMINI_API_KEY`, `OPENAI_API_KEY` or both. Your cubes then connect to `wss://<your-app>.fly.dev/device`, and the admin page is at `https://<your-app>.fly.dev/admin`.
 
 ## Building and flashing a cube
 
@@ -195,6 +194,7 @@ A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick 
 
 `/admin` on the server, behind `CUBEY_ADMIN_PASSWORD`:
 
+- the models Cubey thinks with, a dropdown for each job (talk, games, drawing), used from the next turn; a model whose provider key isn't set is greyed out
 - every Cubey, its child, whether it's online, and what it cost today, this month and in all
 - a Cubey's talks, word for word, with the big questions marked
 - its child's name, birthday and languages, its theme and brightness, its name, blocking it
@@ -210,13 +210,9 @@ Everything is in `server/.env` (see [`server/.env.example`](server/.env.example)
 | Variable | What it sets |
 | --- | --- |
 | `SONIOX_API_KEY` | Soniox: hearing and speaking |
-| `OPENAI_API_KEY` | OpenAI, for the default models |
-| `GEMINI_API_KEY` | Gemini, for `CUBEY_TALK=live` or Gemini models |
+| `GEMINI_API_KEY`, `OPENAI_API_KEY` | The models' providers, one or both: which models the admin page offers. Gemini Live needs `GEMINI_API_KEY` |
 | `CUBEY_TALK` | `cascade` (default: Soniox and a model) or `live` (speech to speech on Gemini Live, with only the battery, brushing and timers) |
 | `CUBEY_TALK_OVER` | `0` turns off talking over Cubey while it speaks |
-| `CUBEY_MODEL` | The talk's model (default `gpt-6-sol`) |
-| `CUBEY_SMART_MODEL` | The games with words and the word game (default `gpt-6-sol`) |
-| `CUBEY_DRAW_MODEL` | Drawing on the screen (default `gpt-6-astra`) |
 | `CUBEY_ADMIN_PASSWORD` | The admin page; no password, no page |
 | `CUBEY_CHILD_TIMEZONE` | The household's time zone, so Cubey knows the time of day |
 | `HOST`, `CUBEY_DEVICE_TOKEN` | `0.0.0.0` and a long random token, to let cubes on the network connect |

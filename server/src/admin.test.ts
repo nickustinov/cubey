@@ -5,12 +5,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { admin } from "./admin";
 import { Fleet } from "./fleet";
+import { Models } from "./models";
 import { Spending } from "./spending";
 
 const now = new Date("2026-10-12T12:00:00Z");
 
-function setUp(password = "kubiks") {
+// keys: the providers' keys the server has, for the models it offers
+function setUp(password = "kubiks", keys: Record<string, string> = { GEMINI_API_KEY: "g", OPENAI_API_KEY: "o" }) {
   const db = new Database(":memory:");
+  const models = new Models(db, keys);
   const fleet = new Fleet(db, mkdtempSync(join(tmpdir(), "cubey-admin-")), "Europe/Riga");
   const spending = new Spending(db);
   fleet.admit("44bd8d60da70", "k", now);
@@ -20,11 +23,11 @@ function setUp(password = "kubiks") {
   fleet.log("44bd8d60da70").add({ heard: "No kurienes nāk bērni?", said: "Pajautā mammai!", forParents: true }, now);
   spending.add("44bd8d60da70", { what: "think", model: "gpt-6-sol", input: 1_000_000, output: 100_000 }, now);
   const wiped: string[] = [], changed: string[] = [];
-  const handle = admin({ password, fleet, spending, wipe: (id) => wiped.push(id), changed: (id) => changed.push(id), now: () => now, wait: async () => {} });
+  const handle = admin({ password, fleet, spending, models, wipe: (id) => wiped.push(id), changed: (id) => changed.push(id), now: () => now, wait: async () => {} });
   const get = (path: string, cookie = "") => handle(new Request(`https://cubey.fly.dev${path}`, { headers: { cookie } }));
   const post = (path: string, form: Record<string, string>, cookie = "") =>
     handle(new Request(`https://cubey.fly.dev${path}`, { method: "POST", headers: { cookie }, body: new URLSearchParams(form) }));
-  return { fleet, spending, wiped, changed, get, post };
+  return { db, fleet, spending, models, wiped, changed, get, post };
 }
 
 const cookieOf = (res: Response) => (res.headers.get("set-cookie") ?? "").split(";")[0];
@@ -102,4 +105,35 @@ test("a Cubey's page: its talks, newest first, the big questions marked; its chi
   expect((await post("/admin/d/44bd8d60da70/reset", {}, cookie))?.headers.get("location")).toBe("/admin"); // a full reset
   expect(wiped).toEqual(["44bd8d60da70"]); // the Cubey itself, if it is on
   expect(fleet.get("44bd8d60da70")).toBeUndefined();
+});
+
+test("the models: a dropdown for each job, those without their key greyed out; a choice is used from the next turn", async () => {
+  const { get, post, models } = setUp("kubiks", { GEMINI_API_KEY: "g" });
+  const cookie = cookieOf((await post("/admin/login", { password: "kubiks" }))!);
+  const html = await (await get("/admin", cookie))!.text();
+  for (const job of ["talk", "games", "drawing"]) expect(html).toContain(`name="${job}"`);
+  expect(html).toContain('<option value="gemini-3.5-flash-lite" selected>Gemini 3.5 Flash-Lite</option>');
+  expect(html).toContain('<option value="gpt-6-sol" disabled>GPT-6 Sol (needs OPENAI_API_KEY)</option>');
+  expect(html).toContain('onchange="this.form.submit()"'); // as it is picked
+  expect((await post("/admin/models", { games: "gpt-6-sol" }, cookie))?.status).toBe(303);
+  expect(models.chosen("games")).toBeUndefined(); // not without its key
+});
+
+test("a model picked for one job is kept; the others, left as they were, stay their defaults", async () => {
+  const { get, post, models } = setUp();
+  const cookie = cookieOf((await post("/admin/login", { password: "kubiks" }))!);
+  await post("/admin/models", { talk: "gpt-6-sol" }); // not signed in: nothing
+  expect(models.chosen("talk")).toBeUndefined();
+  await post("/admin/models", { talk: "gpt-6-sol", games: "gemini-3.5-flash-lite", drawing: "gpt-6-astra" }, cookie); // the form sends all three
+  expect(models.chosen("talk")).toBe("gpt-6-sol");
+  expect(models.chosen("games")).toBeUndefined(); // a default: it follows the keys
+  expect(models.chosen("drawing")).toBeUndefined();
+  expect(await (await get("/admin", cookie))!.text()).toContain('<option value="gpt-6-sol" selected>GPT-6 Sol</option>');
+});
+
+test("a chosen model whose key is gone: the page says which one talks instead", async () => {
+  const { db, get, post } = setUp("kubiks", { GEMINI_API_KEY: "g" });
+  new Models(db, { GEMINI_API_KEY: "g", OPENAI_API_KEY: "o" }).choose("talk", "gpt-6-sol"); // chosen while the key was there
+  const cookie = cookieOf((await post("/admin/login", { password: "kubiks" }))!);
+  expect(await (await get("/admin", cookie))!.text()).toContain("GPT-6 Sol needs OPENAI_API_KEY: Gemini 3.5 Flash-Lite instead");
 });
