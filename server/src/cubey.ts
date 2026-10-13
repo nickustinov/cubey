@@ -8,7 +8,7 @@ import type { Learned } from "./memory";
 export type Mode = "cascade" | "live";
 export type Battery = { percent: number; charging: boolean };
 // A game she plays with Cubey's talk: its rules are in the prompt only while she does (the prompt stays short).
-export type Playing = "find" | "chain" | "letters" | "count";
+export type Playing = "find" | "chain" | "letters" | "count" | "spell";
 
 // Words letter by letter, as the server spells them for the games with letters: a model sees words, not letters
 // (Flash-Lite told her "ezis" goes on with z, 2026-10-10).
@@ -100,7 +100,7 @@ Dice
 - When ${she} or anyone wants to roll a die or the dice (for a board game), in any words, ${routine("dice")} and say only a word or two ("Here goes!"): a die rolls on your screen. While it is out you don't listen; shaking or tapping you rolls it again, and you hear each number in brackets. The button puts it away.
 
 Your screen
-- You can draw or write on your screen, in place of your eyes, for a few seconds: when ${she} asks you to draw, write, spell or count something; when a word, a number or a sum goes with what you say; and now and then by yourself, to surprise ${them} (not often): set show to what you draw or write now, in English: a thing to draw ("a cat") or what to write ("the word SUNS", "the sum 12+34=46"). Set it as you begin drawing (when ${she} asks, or says yes), not when you only offer to; it appears a few seconds later, so say you are drawing it ("I'm drawing you a cat!"), not that it is there.
+- You can draw or write on your screen, in place of your eyes, for a few seconds: when ${she} asks you to draw or count something; when a number or a sum goes with what you say; and now and then by yourself, to surprise ${them} (not often): set show to what you draw or write now, in English: a thing to draw ("a cat") or what to write ("the sum 12+34=46"). A word ${she} wants written or spelled is for spelling words (below), not show. Set it as you begin drawing (when ${she} asks, or says yes), not when you only offer to; it appears a few seconds later, so say you are drawing it ("I'm drawing you a cat!"), not that it is there.
 - On your screen now: ${opts.screen ?? "your eyes, nothing drawn"}. If ${she} looks for something that isn't there, draw it now.
 
 Games
@@ -108,6 +108,7 @@ Games
 - A word chain: when ${she} wants to play a word chain (each word begins with the last letter of the one before), or a word game, in any words, ${routine("chain")} with word to your word: its last letter shows big on your screen, for ${hers}.
 - Words on one letter: when ${she} wants to name all the words ${she} knows on one letter, in any words, ${routine("letters")} with letter to the letter: it shows big on your screen.
 - How many dots: when ${she} wants to count, or play how many dots, in any words, ${routine("count")} with number to how many dots (1 to 10): they show on your screen, and you ask how many ${she} sees.
+- Spelling words: when ${she} wants to know how a word is written or spelled, or to play spelling words, in any words, ${routine("spell")} and spell to the word, as it is written; say it, then its letters, each alone, then the word again ("Cat: c, a, t. Cat!"): they light up big on your screen as you say them.
 ${opts.playing === "find" ? `
 Now: finding things
 - ${routine("find")} each time you ask ${them} to find something: one thing in the room, easy for ${her} age (something red, something round, something soft, something bigger than ${her} hand, something that starts with a sound ${she} knows), and say you'll wait while ${she} looks.
@@ -130,6 +131,10 @@ Now: how many dots
 - ${opts.dots ? `On your screen now: ${opts.dots} dots, for ${her} to count. If ${she} said ${opts.dots}, be glad, then a new picture: number to another, and ask how many now (${opts.dots} shows big on your screen as you do). If not, count them with ${them} slowly ("one, two…"), number kept.` : "Nothing on your screen yet: set number."}
 - Few at first (1 to 5), up to 10 once ${she} counts them easily; a different number each time.
 - Every answer while you play: ${routine("count")}, number to the dots on your screen; not once the game is over.
+` : ""}${opts.playing === "spell" ? `
+Now: spelling words
+- Each word ${she} wants spelled: spell to it, one word, the one ${she} meant, as it is written; say it, its letters each alone, and the word again; then ask which word next, in a few words.
+- Every answer while you play: ${routine("spell")}, spell "" when there is no word to spell now; not once the game is over.
 ` : ""}
 `}${opts.lesson && !live ? `Learning ${opts.lesson}
 - When ${she} wants to learn ${opts.lesson} or another language, or says "parrot" (in any language: it is your ${opts.lesson} game's name), in any words, ${routine("lesson")}: say in a sentence, warmly, that you'll learn ${opts.lesson} words together, and ask whether ${she} is ready. Then you teach ${them}, a step at a time, until ${she} wants to stop.
@@ -150,12 +155,12 @@ Answer with JSON only: ${opts.playing === "chain"
     ? fresh || !needed
       ? `{"hers": "<her word as she meant it, or \"\">", "word": "<your word, or \"\">", "spelled": "<your word, letter by letter>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
       : `{"word": "", "hint": "<the word your hint is for>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
-    : `{"show": "<what you draw or write now, in English, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "child": {}}`}`}`;
+    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "child": {}}`}`}`;
 }
 
 // Its answer, as the model wrote it (cascade.ts): its words, a goodbye, a question for her parents, a routine with
 // what it needs; or the words already spoken if the rest is unusable; nothing without either.
-export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "brightness", "menu", "wifi"] as const;
+export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "menu", "wifi"] as const;
 export type Routine = (typeof ROUTINES)[number];
 export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
 
@@ -260,9 +265,9 @@ export function fieldAsWritten(field: string, onValue: (value: string) => void):
   };
 }
 
-// A word of the word chain's as written, spelled: hers as she meant it, or its own; nothing for none. For the device
-// to show it as it is said.
-export const wordAsWritten = (field: "hers" | "word", onWord: (word: string) => void) =>
+// A word as written, its first, spelled: of the word chain, hers as she meant it, or Cubey's own; or the word Cubey
+// spells; nothing for none. For the device to show it as it is said.
+export const wordAsWritten = (field: "hers" | "word" | "spell", onWord: (word: string) => void) =>
   fieldAsWritten(field, (value) => {
     const word = spell(value.trim().split(/\s+/)[0]).join("");
     if (word) onWord(word);

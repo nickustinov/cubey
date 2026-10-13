@@ -39,6 +39,16 @@ TEST_CASE("how many dots to show, or none: the game is over") {
     CHECK(parse_message(R"({"type":"count","n":-2})").n == 0);
 }
 
+TEST_CASE("a word Cubey spells (its letters), and when each of them is said in its speech") {
+    CHECK(parse_message(R"({"type":"spell","word":"kaķis"})").word == "kaķis");
+    const ServerMessage at = parse_message(R"({"type":"spell.at","i":0,"ms":700})");
+    CHECK(at.i == 0);
+    CHECK(at.ms == 700);
+    const ServerMessage none = parse_message(R"({"type":"spell.at","i":-1})");
+    CHECK(none.i < 0); // none: nothing to time
+    CHECK(none.ms < 0);
+}
+
 TEST_CASE("something to show on the screen: a picture's rows, or text") {
     const ServerMessage picture = parse_message(R"({"type":"show","rows":["#+.","..#"]})");
     CHECK(picture.rows == std::vector<std::string>{"#+.", "..#"});

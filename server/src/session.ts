@@ -56,6 +56,11 @@
 //                                                       on from that letter
 //                     {"type":"count", n?}              how many dots: n dots to count, the number before shown big
 //                                                       first; none: the game is over, Cubey's eyes
+//                     {"type":"spell", word}            Cubey spells a word (its letters, small), before its speech:
+//                                                       they show big one by one as its voice says them, then all of
+//                                                       it passes
+//                     {"type":"spell.at", i, ms}        the word's letter i is said ms into Cubey's speech (Soniox's
+//                                                       timing); one never timed shows once the speech is over
 //                     {"type":"show", rows? | text?}    Cubey draws or writes, in place of its eyes for a few seconds:
 //                                                       a picture's 24 rows of 24 ('#' lit, '+' dim), or text in the
 //                                                       dot font, still if it fits, else scrolling past

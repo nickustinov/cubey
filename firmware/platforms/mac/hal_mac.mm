@@ -183,11 +183,13 @@ void mac_set_keys(bool plus, bool minus) {
 }
 void mac_set_battery(cubey::Battery battery) { pretend_battery = battery.percent + (battery.charging ? 1000 : 0); }
 static std::atomic<int> turned{0}; // the pretend cube, quarters clockwise
+static uint32_t pretend_speech_until = 0; // the UI thread's: Cubey's pretend speech plays until then
 void mac_turn(int quarters) { turned = (turned + quarters) & 3; }
 static std::atomic<int> shaking{0}; // readings still to swing
 void mac_shake() { shaking = 20; }
 
 void mac_pretend_online() { connected = true, session = 1; }
+void mac_pretend_speech(uint32_t ms) { pretend_speech_until = lv_tick_get() + ms; }
 
 void mac_receive(const char *json) {
     std::lock_guard<std::mutex> lock(mu);
@@ -221,7 +223,7 @@ int speaker_rate() { return kSpeakerRate; }
 
 bool speaker_busy() {
     std::lock_guard<std::mutex> lock(mu);
-    return !speech.empty();
+    return !speech.empty() || static_cast<int32_t>(pretend_speech_until - lv_tick_get()) > 0;
 }
 
 void speaker_stop() {

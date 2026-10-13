@@ -8,7 +8,9 @@ namespace cubey {
 // A text message from the server (server/src/session.ts): its type; for "said" whether it was the goodbye; for
 // "timer" how many minutes, and what for; for "letter" the letter (UTF-8; none: the game with letters is over), and
 // in the word chain Cubey's word, for the letter to come from, and hers before it; for "talk_over" whether she may
-// talk over Cubey; for "count" how many dots (none: the game is over); for "show" a picture's rows or text; for
+// talk over Cubey; for "count" how many dots (none: the game is over); for "spell" the word Cubey spells (its
+// letters, small), and for "spell.at" which of its letters (i) is said how far into Cubey's speech (ms; both -1 for
+// none); for "show" a picture's rows or text; for
 // "settings" the language Cubey speaks, the one it teaches, all it speaks, whether it is a new Cubey, not set up
 // (the grown-ups' menu), the screen's brightness in percent (0: not said) and its theme (ui/dots.h; none: not said).
 struct ServerMessage {
@@ -28,6 +30,7 @@ struct ServerMessage {
     bool fresh = false;
     int brightness = 0;
     std::string theme;
+    int i = -1, ms = -1;
 };
 
 ServerMessage parse_message(const std::string &json);

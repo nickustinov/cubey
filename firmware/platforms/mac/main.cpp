@@ -5,11 +5,12 @@
 //                                      quarter clockwise, s shakes it, = and - are the board's "+" and "–" (held
 //                                      5 s: the Wi-Fi setup, the grown-ups' menu). Talks to the server at CUBEY_SERVER (default
 //                                      ws://127.0.0.1:8788/device).
-//   cubey-sim --screenshot out.png [--online] [--battery 30|30+] [--turn 1] [--message JSON ...] [--tap X,Y ...] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--no-wifi] [--ms 1000]
+//   cubey-sim --screenshot out.png [--online] [--battery 30|30+] [--turn 1] [--message JSON ...] [--tap X,Y ...] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--ms 1000]
 //                                      the screen, rendered headless to a PNG; --online pretends the server is there
 //                                      (otherwise the eyes are shut); --message arrives as if the server sent it;
-//                                      messages, taps, presses and keys (hold-plus, hold-minus: held 5 s) in
-//                                      the order given, then --ms of time; --no-wifi: no network kept; --battery:
+//                                      messages, taps, presses, keys (hold-plus, hold-minus: held 5 s) and Cubey's
+//                                      speech playing MS long (--speech) in the order given, then --ms of time;
+//                                      --no-wifi: no network kept; --battery:
 //                                      its charge, + while charging; --turn: the cube turned so many quarters clockwise
 //                                      (the picture turns back upright)
 #include <SDL2/SDL.h>
@@ -108,6 +109,7 @@ static int run_screenshot(int argc, char **argv) {
         PowerPress press = PowerPress::None; // or the power button
         lv_point_t tap{-1, -1};              // or a finger's tap
         const char *keys = nullptr;          // or the board's keys, pressed
+        int speech_ms = 0;                   // or Cubey's speech, playing so long
     };
     std::vector<Step> steps;
     for (int i = 1; i < argc; i++) {
@@ -118,6 +120,7 @@ static int run_screenshot(int argc, char **argv) {
         else if (a == "--power") steps.push_back({nullptr, strcmp(argv[++i], "long") == 0 ? PowerPress::Long : PowerPress::Short});
         else if (a == "--ms") ms = atoi(argv[++i]);
         else if (a == "--keys") steps.push_back({nullptr, PowerPress::None, {-1, -1}, argv[++i]});
+        else if (a == "--speech") steps.push_back({nullptr, PowerPress::None, {-1, -1}, nullptr, atoi(argv[++i])});
         else if (a == "--no-wifi") mac_wifi_unset();
         else if (a == "--turn") mac_turn(atoi(argv[++i]));
         else if (int x, y; a == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) steps.push_back({nullptr, PowerPress::None, {x, y}}), i++;
@@ -140,6 +143,7 @@ static int run_screenshot(int argc, char **argv) {
     run_ms(200);
     for (const auto &step : steps) {
         if (step.message) mac_receive(step.message);
+        else if (step.speech_ms) mac_pretend_speech(static_cast<uint32_t>(step.speech_ms));
         else if (step.keys) {
             const bool plus = strcmp(step.keys, "plus") == 0 || strcmp(step.keys, "hold-plus") == 0;
             mac_set_keys(plus, !plus);

@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "letter_board.h"
 #include "ui/dots.h"
 #include "ui/font.h"
 #include "ui/letter.h"
@@ -70,22 +71,8 @@ TEST_CASE("its digits and a few signs on the capitals' line too, for a sum or a 
     CHECK(font::letter(" ")->rows[0].find('#') == std::string::npos);
 }
 
-namespace {
-// How many of the board's dots show so, at a moment.
-int count(const letter::Shown &shown, const letter::Frame &frame, dots::Dot as) {
-    int n = 0;
-    for (int row = 0; row < dots::kBoard; row++)
-        for (int col = 0; col < dots::kBoard; col++) n += letter::dot(shown, frame, col, row) == as;
-    return n;
-}
-// Whether two moments light the same dots fully.
-bool same_lit(const letter::Shown &a, const letter::Frame &fa, const letter::Shown &b, const letter::Frame &fb) {
-    for (int row = 0; row < dots::kBoard; row++)
-        for (int col = 0; col < dots::kBoard; col++)
-            if ((letter::dot(a, fa, col, row) == dots::Dot::On) != (letter::dot(b, fb, col, row) == dots::Dot::On)) return false;
-    return true;
-}
-} // namespace
+using letter_board::count;
+using letter_board::same_lit;
 
 TEST_CASE("a letter big on the board, a capital: its dots two by two, in the board's middle, across and down") {
     const letter::Shown s = letter::start("", "", "s");

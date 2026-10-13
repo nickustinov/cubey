@@ -13,16 +13,19 @@
 // words come first, as big, a column at a time, as they are said: hers as her turn ends, from its first letter, quicker
 // (while Cubey thinks), stopping on the letter Cubey's goes on from; still a moment, the rest of it dims and goes;
 // then Cubey's, once written, grows from that letter, the rest of it fading in, and goes on to the letter she needs
-// now; still, the rest goes, and her letter stays. Cubey's first word comes in from the right.
+// now; still, the rest goes, and her letter stays. Cubey's first word comes in from the right. A word Cubey spells
+// (ui/spell.h) arrives a letter at a time, as big: each new one lit beside the one before, the word moving on to it,
+// those before dim; then all of it passes, lit.
 namespace cubey::letter {
 
 constexpr uint32_t kDotMs = 50;     // Cubey's word: a column of dots moved
 constexpr uint32_t kHersDotMs = 30; // hers, done before Cubey says its own
 constexpr uint32_t kHoldMs = 400;   // a word still, whole, before the rest goes
 constexpr uint32_t kDimMs = 250;    // the rest dim, going or coming
+constexpr uint32_t kSpellDotMs = 25; // a word spelled, moving on to the letter just said
 
 struct Word {
-    std::vector<font::Letter> letters;
+    std::vector<const font::Letter *> letters; // the font's own
     int at;        // the letter it stops on, in the middle; none: text, all of it
     int from = -1; // the letter it starts on in the middle; none: in from the right
     uint32_t dot_ms = kDotMs;
@@ -55,6 +58,13 @@ struct Frame {
 };
 Frame frame(const Shown &shown, uint32_t ms);
 dots::Dot dot(const Shown &shown, const Frame &frame, int col, int row);
+// A word Cubey spells: its first letters so far, each so many stopping on its last, then all of it as text; nothing
+// if the font hasn't one of its letters.
+Shown spelling(const std::string &utf8);
+// Its moment `ms` after letter `said` (1 to all) showed: the word moving on to that letter from the one before, it lit
+// and those before it dim; the first, at once in the middle.
+Frame spelled(const Shown &spelling, int said, uint32_t ms);
+Frame passing(const Shown &spelling, uint32_t ms); // all of it passing, lit, `ms` into its passes
 
 lv_obj_t *create(lv_obj_t *parent, Shown shown, uint32_t now);
 bool go_on(lv_obj_t *letter, const std::string &cubeys, const std::string &stop_on, uint32_t now);

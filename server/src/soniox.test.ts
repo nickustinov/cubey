@@ -161,9 +161,10 @@ describe("Transcriber", () => {
   });
 });
 
-// A stand-in for Soniox's TTS socket: one byte of audio per text chunk, then terminated at text_end.
-// `streams` records each stream's config and text, in order.
-function fakeTts(streams: { voice: string; language: string; sample_rate: number; text: string }[]) {
+// A stand-in for Soniox's TTS socket: one byte of audio per text chunk, then terminated at text_end; asked to, each
+// chunk's characters timed with it, 0.1 s apart across the stream. `streams` records each stream's config and text,
+// in order.
+function fakeTts(streams: { voice: string; language: string; sample_rate: number; timestamps?: boolean; text: string }[]) {
   const open = new Map<string, (typeof streams)[number]>();
   return Bun.serve<undefined>({
     port: 0,
@@ -173,11 +174,16 @@ function fakeTts(streams: { voice: string; language: string; sample_rate: number
         const m = JSON.parse(String(msg));
         if (m.api_key) {
           expect(open.size).toBe(0); // one stream at a time
-          return void open.set(m.stream_id, { voice: m.voice, language: m.language, sample_rate: m.sample_rate, text: "" });
+          return void open.set(m.stream_id, { voice: m.voice, language: m.language, sample_rate: m.sample_rate, timestamps: m.return_timestamps, text: "" });
         }
         const stream = open.get(m.stream_id)!;
+        const from = stream.text.length;
         stream.text += m.text;
-        ws.send(JSON.stringify({ audio: Buffer.from([1]).toString("base64"), stream_id: m.stream_id }));
+        const characters = [...m.text as string];
+        const timestamps = stream.timestamps && characters.length
+          ? { characters, character_start_times_seconds: characters.map((_, i) => (from + i) / 10), character_end_times_seconds: characters.map((_, i) => (from + i + 1) / 10) }
+          : undefined;
+        ws.send(JSON.stringify({ audio: Buffer.from([1]).toString("base64"), stream_id: m.stream_id, ...(timestamps && { timestamps }) }));
         if (!m.text_end) return;
         await Bun.sleep(20);
         open.delete(m.stream_id);
@@ -214,6 +220,27 @@ describe("Speaker", () => {
       { language: "en", text: "cat" },
       { language: "lv", text: "! Lieliski." },
     ]);
+  });
+
+  test("asked as its stream opens, it times each character it speaks across the stream; not asked, nothing is timed", async () => {
+    const streams: Parameters<typeof fakeTts>[0] = [];
+    server = fakeTts(streams);
+    let wanted = false;
+    const heard: [string[], number[]][] = [];
+    const opts = { voice: "Owl", language: "lv", sampleRate: 24000, speed: 1, onAudio: () => {}, url: url() };
+    const speaker = new Speaker({ ...opts, timestamps: () => wanted, onCharacters: (c, s) => void heard.push([c, s]) });
+    wanted = true; // known once the answer's word to spell is written, before its first words are said
+    await speaker.say("K: ");
+    await speaker.say("k!");
+    await speaker.end();
+    expect(streams[0].timestamps).toBe(true);
+    expect(heard).toEqual([[["K", ":", " "], [0, 0.1, 0.2]], [["k", "!"], [0.3, 0.4]]]);
+
+    const plain = new Speaker({ ...opts, onCharacters: (c, s) => void heard.push([c, s]) });
+    await plain.say("Sveika!");
+    await plain.end();
+    expect(streams[1].timestamps).toBeUndefined();
+    expect(heard).toHaveLength(2);
   });
 
   // It connects while the child is still talking; a refused connection must not crash the server before

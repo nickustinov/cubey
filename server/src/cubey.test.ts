@@ -232,16 +232,31 @@ test("how many dots: so many on its screen, and she says how many; right, a new 
   for (const no of [0, 11, 2.5, "daudz", undefined]) expect(count(no)?.number).toBeUndefined(); // the dots stay
 });
 
+test("spelling words: the word she asks for, as it is written, said letter by letter as they light up; its rules only while she plays", () => {
+  const prompt = cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" });
+  expect(prompt).toContain('set routine to "spell" and spell to the word, as it is written');
+  expect(prompt).toContain('say it, then its letters, each alone, then the word again ("Cat: c, a, t. Cat!")');
+  expect(prompt).toContain('Answer with JSON only: {"show": "<what you draw or write now, in English, or "">", "spell": "<the word you spell now, or "">", "say"'); // before its speech, for its letters to be timed
+  expect(prompt).not.toContain("Now: spelling words");
+  const playing = cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade", playing: "spell" });
+  expect(playing).toContain("Now: spelling words");
+  expect(playing).toContain("then ask which word next");
+  expect(playing).toContain('Every answer while you play: set routine to "spell", spell "" when there is no word to spell now; not once the game is over.');
+  expect(readAnswer(JSON.stringify({ spell: "kaķis", say: "Kaķis: k, a, ķ, i, s.", routine: "spell" }))?.routine).toBe("spell");
+  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "live" })).not.toContain('"spell"');
+});
+
 test("its screen: when she asks or now and then by itself, it names what to show; not on Gemini Live", () => {
   const prompt = cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" });
-  expect(prompt).toContain('set show to what you draw or write now, in English: a thing to draw ("a cat") or what to write ("the word SUNS", "the sum 12+34=46")');
+  expect(prompt).toContain('set show to what you draw or write now, in English: a thing to draw ("a cat") or what to write ("the sum 12+34=46")');
+  expect(prompt).toContain("A word she wants written or spelled is for spelling words (below), not show.");
   // On Fly (2026-10-12): it said it drew the sun, set nothing, and told her the sun was there.
   expect(prompt).toContain("On your screen now: your eyes, nothing drawn. If she looks for something that isn't there, draw it now.");
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade", screen: "the sun, still being drawn: not there yet" })).toContain("On your screen now: the sun, still being drawn: not there yet.");
   expect(prompt).toContain("now and then by yourself, to surprise her");
   expect(prompt).toContain("Set it as you begin drawing (when she asks, or says yes), not when you only offer to"); // it sent a cloud as it asked whether to
   expect(prompt).toContain("say you are drawing it"); // it said "here it is" seconds before
-  expect(prompt).toContain('Answer with JSON only: {"show": "<what you draw or write now, in English, or "">", "say"'); // thought of first
+  expect(prompt).toContain('Answer with JSON only: {"show": "<what you draw or write now, in English, or "">",'); // thought of first
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "live" })).not.toContain('"show"');
   expect(readAnswer(JSON.stringify({ show: " a cat ", say: "Zīmēju!" }))).toMatchObject({ show: "a cat" }); // no routine needed
   expect(readAnswer(JSON.stringify({ show: "", say: "Labi!" }))?.show).toBeUndefined();

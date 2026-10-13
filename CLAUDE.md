@@ -25,6 +25,7 @@ server/                Bun + TypeScript: the talk, the models, the device protoc
   src/cascade.ts       the talk through Soniox (soniox.ts) and a model (llm.ts), answers begun early at the child's pause
   src/live.ts          the talk on Gemini Live (tool calls, moving to a new connection on GoAway)
   src/cubey.ts         Cubey's prompt for either, reading its JSON answer, the drawing prompt
+  src/spelling.ts      a word Cubey spells: its letters found in Soniox's timing of its speech
   src/lesson.ts        the word game's prompt and turns; lesson-game.ts its plan; curriculum.ts its content
   src/memory.ts        what Cubey knows of the child (memory.md); child.ts the child's type, languages, themes
   src/fleet.ts         the Cubeys, each by chip id and its own key; data under data/devices/<id>/
@@ -34,8 +35,8 @@ server/                Bun + TypeScript: the talk, the models, the device protoc
 firmware/              C++17 + LVGL 9.6
   core/                plain C++17 and LVGL, no platform includes
     cubey.cpp          the runtime: awake or asleep, the talk, routines, the buttons
-    services/          logic without drawing: voice turns, talk-over detection, timers, brushing, dice, menu, Wi-Fi setup, keyboard
-    ui/                drawing on the dot board (dots.h): eyes, mouth, dial, die, letters, cards, menu, Wi-Fi; font.cpp the dot font
+    services/          logic without drawing: voice turns, talk-over detection, timers, brushing, dice, spelling, menu, Wi-Fi setup, keyboard
+    ui/                drawing on the dot board (dots.h): eyes, mouth, dial, die, letters, spelling, cards, menu, Wi-Fi; font.cpp the dot font
   hal/hal.h            what core needs from a platform
   platforms/mac/       the simulator (SDL window, AVAudioEngine with echo cancelling, headless screenshots)
   platforms/esp32/     the board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (esp-sr echo cancelling, CO5300 panel)
@@ -69,7 +70,7 @@ With `HOST=0.0.0.0` and `CUBEY_DEVICE_TOKEN` in `server/.env` so the board can r
 cmake -S firmware -B build/firmware -G Ninja && cmake --build build/firmware   # simulator + tests
 ctest --test-dir build/firmware --output-on-failure                             # firmware tests
 build/firmware/platforms/mac/cubey-sim                                           # simulator window
-build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--no-wifi] [--ms 1000]
+build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--ms 1000]
 
 cd server && bun run dev                                                         # server on ws://127.0.0.1:8788/device
 cd server && bun test && bunx tsc --noEmit                                       # server tests and types
@@ -117,7 +118,7 @@ A routine is anything Cubey does besides talk. It travels from the model's answe
 ## Gotchas
 
 - **Providers' terms.** Gemini's terms forbid apps used by under-18s, and OpenAI's need checking for a child's use: an open question (`docs/design.md`).
-- **Soniox.** Cubey's Soniox project must be in the EU: its keys work only on Soniox's EU servers (`soniox.ts`). Some projects allow one TTS stream at a time: don't share one with another app. A TTS stream with no text for about 10 s is dropped, so the voice connects when the child's pause is heard.
+- **Soniox.** Some projects allow one TTS stream at a time: don't share one with another app. A TTS stream with no text for about 10 s is dropped, so the voice connects when the child's pause is heard.
 - **Gemini Live** bills the whole talk so far again on every turn, with no caching: the context is capped (`CONTEXT_MOST` in `live.ts`), and each connection's cost is logged when it ends. Gemini ends a connection after about ten minutes, with a GoAway first: the talk moves to a new one between turns.
 - **macOS** asks for microphone access for the terminal the simulator runs in, and the firewall may ask whether Bun may accept connections (the board's).
 - **LVGL 9.6** moved its public headers to `include/lvgl/` and deprecated `lv_obj_add_flag` (use `lv_obj_set_clickable` and friends). Don't load a new screen inside the old screen's own event: LVGL grows that screen's event list while it walks it, a use-after-free; `lv_async_call` it. An AddressSanitizer build finds such things: `cmake -S firmware -B build/asan -G Ninja -DCMAKE_CXX_FLAGS=-fsanitize=address -DCMAKE_C_FLAGS=-fsanitize=address -DCMAKE_EXE_LINKER_FLAGS=-fsanitize=address`.

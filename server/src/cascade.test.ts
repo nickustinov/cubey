@@ -36,10 +36,11 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     pcm: number; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: (soFar: string) => void; text: string; cancelled: boolean;
     also?: string[]; waitMs?: number;
   }[] = [];
-  const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number }[] = [];
+  const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number; timed: boolean }[] = [];
   let heardNext = "Kāpēc debesis ir zilas?";
   const learned: object[] = [];
   const brightened: number[] = [];
+  const logged: string[] = [];
   const deps: CascadeDeps = {
     history: { recent: () => before },
     listen: ({ onHeard, onWords, onPause, also, waitMs }) => {
@@ -47,11 +48,17 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
       listeners.push(l);
       return { send: (pcm) => void (l.pcm += pcm.length), finish: async () => l.text, cancel: () => void (l.cancelled = true) };
     },
-    speak: ({ sampleRate, onAudio }) => {
-      const v = { said: [] as string[], languages: [] as (string | undefined)[], cancelled: false, rate: sampleRate };
+    // Asked to, it times what it says as Soniox would: a character every 0.1 s.
+    speak: ({ sampleRate, onAudio, timestamps, onCharacters }) => {
+      const v = { said: [] as string[], languages: [] as (string | undefined)[], cancelled: false, rate: sampleRate, timed: false };
       voices.push(v);
+      let at = 0;
       return {
-        say: async (text, language) => void (v.said.push(text), v.languages.push(language)),
+        say: async (text, language) => {
+          v.said.push(text), v.languages.push(language);
+          if (v.said.length === 1) v.timed = timestamps?.() ?? false; // as its stream opens, with the first text
+          if (v.timed) onCharacters?.([...text], [...text].map(() => (at += 0.1) - 0.1));
+        },
         end: async () => onAudio(Buffer.alloc(4)),
         cancel: () => void (v.cancelled = true),
       };
@@ -60,6 +67,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     smart: model("smart"),
     draw: model("draw"),
     lessons: undefined as unknown as Lessons, // below: it shares the model
+    log: (line) => void logged.push(line),
   };
   const db = new Database(":memory:");
   deps.lessons = new Lessons({
@@ -98,7 +106,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     await Bun.sleep(5);
     return { end: async () => (l.onHeard(), await Bun.sleep(5)) };
   };
-  return { live, ask, pause, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened };
+  return { live, ask, pause, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, logged };
 }
 
 test("Cubey's hello: the model is told what happened, in Cubey's prompt with its battery, and its words are spoken as written", async () => {
@@ -525,6 +533,33 @@ test("how many dots: each new number shows (the same again would give the answer
   expect(t.texts.at(-2)).toEqual({ type: "count" });
   await t.ask("Skaitīsim vēl!", json("Cik?", { routine: "count", number: 2 })); // a new game: shown again
   expect(t.texts.at(-2)).toEqual({ type: "count", n: 2 });
+});
+
+test("spelling a word: the server spells it to the device before Cubey speaks, then times each letter as Cubey says it alone", async () => {
+  const t = await talk();
+  expect(t.voices.at(-1)!.timed).toBe(false); // its voice times nothing it isn't spelling
+  const spelt = JSON.stringify({ spell: "Kaķis", say: "Kaķis: k, a, ķ, i, s. Kaķis!", routine: "spell" });
+  await t.ask("Kā raksta kaķis?", spelt);
+  expect(t.voices.at(-1)!.timed).toBe(true);
+  expect(t.texts.slice(-8)).toEqual([
+    { type: "heard" },
+    { type: "spell", word: "kaķis" },
+    { type: "spell.at", i: 0, ms: 700 },
+    { type: "spell.at", i: 1, ms: 1000 },
+    { type: "spell.at", i: 2, ms: 1300 },
+    { type: "spell.at", i: 3, ms: 1600 },
+    { type: "spell.at", i: 4, ms: 1900 },
+    { type: "said", heard: "Kā raksta kaķis?", said: "Kaķis: k, a, ķ, i, s. Kaķis!", last: false },
+  ]);
+  expect(t.logged).toContain("spelled kaķis: 5 of 5 letters timed"); // to see on the board's server whether Soniox's timing finds them
+  await t.ask("Un suns?", JSON.stringify({ spell: "suns jā", say: "Suns: s, u, n, s.", routine: "spell" }));
+  expect(t.asked.at(-1)!.model).toBe("smart"); // a game with words, while she plays it
+  expect(t.asked.at(-1)!.system).toContain("Now: spelling words");
+  expect(t.texts).toContainEqual({ type: "spell", word: "suns" }); // one word
+  await t.ask("Pietiek!", json("Labi!"));
+  await t.ask("Kāpēc?", json("Tāpēc."));
+  expect(t.asked.at(-1)!.model).toBe("talk");
+  expect(t.asked.at(-1)!.system).not.toContain("Now: spelling words");
 });
 
 test("another routine ends a game with letters first", async () => {

@@ -17,6 +17,7 @@ import type { Complete, Message } from "./llm";
 import type { Learned } from "./memory";
 import type { Spent } from "./prices";
 import { wordsOf } from "./soniox";
+import { SpokenLetters } from "./spelling";
 import { type Opened, routineMessage, type Talk, type TalkOut, type Talks } from "./talk";
 
 export const VOICE = "Russell"; // a Soniox voice (Daniel, Sebastian and Russell tried on 2026-10-10); it takes the cues in Cubey's words (cubey.ts)
@@ -38,7 +39,11 @@ export type CascadeDeps = {
   listen: (opts: {
     child: Child; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: (soFar: string) => void; also?: string[]; waitMs?: number;
   }) => Listener;
-  speak: (opts: { voice: string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void }) => Voice;
+  // timestamps: whether to time what it says, asked with its first words; onCharacters: what it says as it times it
+  speak: (opts: {
+    voice: string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void;
+    timestamps?: () => boolean; onCharacters?: (characters: string[], seconds: number[]) => void;
+  }) => Voice;
   complete: Complete;
   // A smarter model than the talk's, slower, for the games with words while she plays them (Flash-Lite praised words
   // on the wrong letter); and one that draws and writes on Cubey's screen (Flash-Lite drew a poor cat, no sums).
@@ -280,7 +285,7 @@ class CascadeTalk implements Talk {
 
   // The model for her turn: the smart one while she plays a game with words.
   private model(): Complete {
-    return this.playing === "chain" || this.playing === "letters" ? this.deps.smart : this.deps.complete;
+    return this.playing === "chain" || this.playing === "letters" || this.playing === "spell" ? this.deps.smart : this.deps.complete;
   }
 
   // What Cubey shows on its screen, as its answer named it (as soon as it is written): drawn or written by the drawing
@@ -328,7 +333,17 @@ class CascadeTalk implements Talk {
     const since = () => Math.round(performance.now() - started);
     let firstAudio = 0, spoken = "", said = Promise.resolve();
     if (note) this.asked = asked;
-    const voice = this.speaking(generation, () => (firstAudio ||= since()));
+    // The word Cubey spells (its first, as the server spells it), to the device before Cubey's speech: its voice then
+    // times what it says, and each letter goes to the device as it is said alone ("Kaķis: k, a, ķ, i, s!").
+    let letters: SpokenLetters | undefined;
+    const spelled = wordAsWritten("spell", (word) => {
+      if (generation !== this.generation) return;
+      letters = new SpokenLetters([...word], (i, ms) => void (generation === this.generation && this.out.text({ type: "spell.at", i, ms })));
+      this.out.text({ type: "spell", word });
+    });
+    const voice = this.speaking(generation, () => (firstAudio ||= since()), {
+      timestamps: () => !!letters, onCharacters: (characters, seconds) => letters?.heard(characters, seconds),
+    });
     const speak = sayingAsWritten((word) => {
       if (generation !== this.generation) return;
       spoken += word;
@@ -355,7 +370,7 @@ class CascadeTalk implements Talk {
       shown = true;
     });
     const sketch = fieldAsWritten("show", (what) => void (what.trim() && this.draw(what.trim().slice(0, 40))));
-    const say = (written: string) => (speak(written), sketch(written), fresh && (heard(written), theirs(written)));
+    const say = (written: string) => (spelled(written), speak(written), sketch(written), fresh && (heard(written), theirs(written)));
     try {
       const { system, messages, battery } = this.prompt(asked);
       const raw = await (early ? early.follow(say) : this.model()({ system, messages, onText: say, spent: this.spent }));
@@ -370,7 +385,7 @@ class CascadeTalk implements Talk {
       // A word once (a die's number, a timer's reminder) starts nothing: the dice's number with the dice set again
       // rolled the die again, and again (2026-10-10).
       const routine = this.once ? undefined : answer.routine;
-      const playing = routine === "find" || routine === "chain" || routine === "letters" || routine === "count" ? routine : undefined;
+      const playing = routine === "find" || routine === "chain" || routine === "letters" || routine === "count" || routine === "spell" ? routine : undefined;
       const screen = (game?: Playing) => (game === "chain" || game === "letters" ? "letter" : game === "count" ? "count" : undefined);
       const took = shown ? hers : undefined; // her word, and Cubey's from it
       if (hers && !took && this.letter) this.out.text({ type: "letter", letter: this.letter }); // no word from it: hers again
@@ -395,6 +410,7 @@ class CascadeTalk implements Talk {
       await said;
       await voice.end();
       this.settle();
+      if (letters) this.deps.log?.(`spelled ${letters.letters.join("")}: ${letters.found} of ${letters.letters.length} letters timed`);
       if (generation !== this.generation) return;
       this.speech = undefined;
       this.deps.log?.(`answer: ${pauseMs ?? "-"} ms her pause, ${written} ms written${early ? " (begun at her pause)" : ""}, ${firstAudio} ms to its first sound`);
@@ -408,10 +424,12 @@ class CascadeTalk implements Talk {
     }
   }
 
-  // Cubey's voice for an answer: its sound goes to the device while the answer is still the talk's (generation).
-  private speaking(generation: number, onSound = () => {}): Voice {
+  // Cubey's voice for an answer: its sound goes to the device while the answer is still the talk's (generation); timed,
+  // what it says as it times it (a word it spells).
+  private speaking(generation: number, onSound = () => {}, timed: Pick<Parameters<CascadeDeps["speak"]>[0], "timestamps" | "onCharacters"> = {}): Voice {
     this.saying = new Set();
     return (this.speech = this.deps.speak({
+      ...timed,
       voice: VOICE, speed: SPEED, language: this.child.language, sampleRate: this.out.rate,
       onAudio: (pcm) => {
         this.spoken += pcm.length; // made, if no longer wanted

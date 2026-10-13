@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "services/battery.h"
 #include "services/power_button.h"
 
@@ -11,6 +13,7 @@ void mac_hal_init(const char *server_url);
 // from it as if it had sent it.
 void mac_pretend_online();
 void mac_receive(const char *json);
+void mac_pretend_speech(uint32_t ms); // Cubey's speech plays this long from now (for a word it spells, --speech)
 
 // The side power button (p in the window, --power for screenshots), and the pretend battery (b, --battery).
 void mac_press(cubey::PowerPress press);

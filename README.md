@@ -18,7 +18,7 @@
     <td><img src="docs/images/count.png" width="150" alt="How many dots"></td>
     <td><img src="docs/images/heart.png" width="150" alt="A heart Cubey drew"></td>
     <td><img src="docs/images/menu.png" width="150" alt="The grown-ups' menu"></td>
-    <td><img src="docs/images/wifi.png" width="150" alt="Wi-Fi setup welcome"></td>
+    <td><img src="docs/images/spell.png" width="150" alt="Spelling a word, a letter at a time"></td>
   </tr>
 </table>
 
@@ -60,11 +60,12 @@ Now and then, when it fits, Cubey offers something it can do, as a question ("Sh
 | "Let's play finding things" | Cubey asks the child to find one safe thing in the room (something red, something soft…) and waits up to three minutes while they look |
 | "Let's play a word chain" | Each word starts with the last letter of the one before. The words scroll across the screen and the letter to go on from shows big |
 | "Let's name words on one letter" | Cubey picks a letter, shows it big and counts the child's words on it, with hints and a new letter every few words |
+| "How do you write 'cat'?", "Let's spell words" | Cubey says the word and spells it letter by letter: each letter lights up big on the screen the moment Cubey says it, then the whole word passes. In the game, Cubey then asks for the next word |
 | "Let's count", "Play how many dots" | 1 to 10 dots show on the screen to count: few at first, more once the child counts easily |
-| "Draw me a cat", "Write my name", "What's 12 plus 34?" | Cubey draws a picture or writes the word or sum on its screen for a few seconds. Now and then it draws something by itself, as a surprise |
+| "Draw me a cat", "What's 12 plus 34?" | Cubey draws a picture or writes the sum on its screen for a few seconds. Now and then it draws something by itself, as a surprise |
 | "I want to learn English", "Parrot" | The word game: picture cards fill the screen and Cubey teaches words of the language it teaches, step by step. The child answers by saying the word or tapping the right picture. It goes on from where they stopped last time, and ends when they want to stop or ask for something else |
 
-Saying something unrelated while a game with letters or dots is on ends that game.
+Saying something unrelated while a game with letters, dots or spelling is on ends that game.
 
 ### For grown-ups
 
@@ -96,7 +97,7 @@ Cubey sleeps after half a minute of quiet, and after 45 s without its server.
 ## How it works
 
 ```
-                 one WebSocket                  ┌──▶ Soniox: speech to text (EU)
+                 one WebSocket                  ┌──▶ Soniox: speech to text
   the cube  ◀──────────────────────▶  server ───┼──▶ a language model: Cubey's answer, as JSON
   (ESP32-S3)   mic audio, messages    (Bun)     ├──▶ Soniox: text to speech
                  speech, routines       │       └──▶ (or Gemini Live, speech to speech)
@@ -116,7 +117,7 @@ The reasoning behind each choice is in [docs/design.md](docs/design.md).
 - macOS with Homebrew: `brew install cmake ninja sdl2`
 - [Bun](https://bun.sh) 1.4 or later
 - API keys:
-  - [Soniox](https://soniox.com): speech to text and text to speech. Create the project in the **EU** region; its keys work only on Soniox's EU servers.
+  - [Soniox](https://soniox.com): speech to text and text to speech.
   - [OpenAI](https://platform.openai.com): the default models for the talk (GPT-6 Sol) and drawing (GPT-6 Astra).
   - [Gemini](https://aistudio.google.com), optional: speech to speech on Gemini Live (`CUBEY_TALK=live`), or Gemini models for the talk.
 
@@ -206,7 +207,7 @@ Everything is in `server/.env` (see [`server/.env.example`](server/.env.example)
 
 | Variable | What it sets |
 | --- | --- |
-| `SONIOX_API_KEY` | Soniox, an EU project: hearing and speaking |
+| `SONIOX_API_KEY` | Soniox: hearing and speaking |
 | `OPENAI_API_KEY` | OpenAI, for the default models |
 | `GEMINI_API_KEY` | Gemini, for `CUBEY_TALK=live` or Gemini models |
 | `CUBEY_TALK` | `cascade` (default: Soniox and a model) or `live` (speech to speech on Gemini Live, with only the battery, brushing and timers) |

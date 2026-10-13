@@ -1,9 +1,8 @@
 // Soniox real-time speech-to-text and text-to-speech over WebSocket.
 // API shapes follow https://soniox.com/docs/api-reference (stt/websocket-api, tts/websocket-api).
 
-// Soniox's EU servers, near Fly's in Frankfurt: Cubey's own EU project, its keys good only there.
-const STT_URL = "wss://stt-rt.eu.soniox.com/transcribe-websocket";
-const TTS_URL = "wss://tts-rt.eu.soniox.com/tts-websocket";
+const STT_URL = "wss://stt-rt.soniox.com/transcribe-websocket";
+const TTS_URL = "wss://tts-rt.soniox.com/tts-websocket";
 export const STT_MODEL = "stt-rt-v5";
 export const TTS_MODEL = "tts-rt-v2";
 export const MIC_RATE = 16000;
@@ -164,6 +163,10 @@ export type SpeakerOpts = {
   sampleRate: number;
   speed: number; // Soniox allows 0.7 to 1.3
   onAudio: (pcm: Buffer) => void;
+  // Whether its stream times each character it speaks, asked as the stream opens (with the first text); and what is
+  // timed: the characters as it reads them, and when each begins, in seconds into the stream.
+  timestamps?: () => boolean;
+  onCharacters?: (characters: string[], seconds: number[]) => void;
   url?: string;
 };
 
@@ -184,6 +187,7 @@ export class Speaker {
       const msg = JSON.parse(String(e.data));
       if (msg.error_code) return this.stream?.done.reject(new Error(`Soniox TTS ${msg.error_type}: ${msg.error_message}`));
       if (msg.audio) this.opts.onAudio(Buffer.from(msg.audio, "base64"));
+      if (msg.timestamps) this.opts.onCharacters?.(msg.timestamps.characters, msg.timestamps.character_start_times_seconds);
       if (msg.terminated && this.stream && msg.stream_id === this.stream.id) this.stream.done.resolve();
     });
   }
@@ -202,6 +206,7 @@ export class Speaker {
       sample_rate: this.opts.sampleRate,
       speed: this.opts.speed,
       stream_id: this.stream.id,
+      ...(this.opts.timestamps?.() && { return_timestamps: true }),
     }));
   }
 

@@ -14,6 +14,7 @@
 #include "services/mixer.h"
 #include "services/power_button.h"
 #include "services/shake.h"
+#include "services/spell.h"
 #include "services/state_report.h"
 #include "services/timer.h"
 #include "services/ticks.h"
@@ -31,6 +32,7 @@
 #include "ui/menu.h"
 #include "ui/mouth.h"
 #include "ui/picture.h"
+#include "ui/spell.h"
 #include "ui/wifi.h"
 
 namespace cubey {
@@ -59,6 +61,8 @@ static lv_obj_t *screen_shown = nullptr; // a picture Cubey drew or text it writ
 static bool screen_moves = false;        // text scrolling past
 static uint32_t screen_since = 0, screen_ms = 0;
 constexpr uint32_t kScreenMs = 8000; // ponytail: a few seconds, about its answer's length
+static std::optional<SpellRun> spelling; // a word Cubey spells, its letters as its voice says them
+static lv_obj_t *spell_shown = nullptr;  // in place of its eyes from its first letter, like a drawing
 static SettingsMenu settings_menu{dots::themes()}; // the grown-ups' menu: the languages and theme, as the server has them
 static lv_obj_t *menu_shown = nullptr; // over everything while it is open
 static WifiSetup wifi_setup;            // a grown-up joining Cubey to a network
@@ -109,6 +113,9 @@ static bool routine_shown() {
 }
 static void on_power(PowerAction action);
 
+// What Cubey drew, or a word it spells once its first letter shows, in place of its eyes.
+static bool drawing_shown() { return screen_shown || (spelling && spelling->shown(lv_tick_get()) > 0); }
+
 // Asleep: an empty black screen, the screen off, the talk over (brushing too), the steps seldom.
 static void sleep_screen() {
     stopped_brushing();
@@ -120,7 +127,8 @@ static void sleep_screen() {
     open_with.clear();
     dice.reset();
     finding_since.reset();
-    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    spelling.reset();
+    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = menu_shown = wifi_shown = lost_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -137,11 +145,12 @@ static void wake_screen() {
     hal::screen(true);
     lv_obj_t *scr = new_screen(dots::ground());
     eyes_shown = eyes::create(scr);
-    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = menu_shown = wifi_shown = lost_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
     wifi_offered = false;
+    spelling.reset();
     dice.reset();
     finding_since.reset();
     brushing.reset();
@@ -208,14 +217,22 @@ static void end_screen() {
     if (!screen_shown) return;
     lv_obj_delete(screen_shown);
     screen_shown = nullptr;
-    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown());
+    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
+}
+
+static void end_spell() {
+    if (!spell_shown) return;
+    lv_obj_delete(spell_shown);
+    spell_shown = nullptr;
+    spelling.reset();
+    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
 }
 
 // The grown-ups' menu is closed: it goes, and what changed goes to the server, which opens the talk anew in it.
 static void end_menu() {
     if (menu_shown) lv_obj_delete(menu_shown);
     menu_shown = nullptr;
-    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || screen_shown);
+    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
     if (!settings_menu.to_send() || !hal::link_connected()) return;
     char msg[160];
     snprintf(msg, sizeof msg, R"({"type":"settings","language":"%s","learns":"%s","theme":"%s","brightness":%d})", settings_menu.language().c_str(),
@@ -236,7 +253,7 @@ static void end_wifi() {
     if (wifi_shown) lv_obj_delete(wifi_shown);
     wifi_shown = nullptr;
     wifi_setup.close();
-    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || screen_shown);
+    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
 }
 
 // A press of the button, awake: back from a routine to Cubey's eyes, or from its eyes to sleep.
@@ -250,8 +267,9 @@ static PowerAction back() {
         end_menu();
         return PowerAction::None;
     }
-    if (screen_shown) {
+    if (screen_shown || spell_shown) {
         end_screen();
+        end_spell();
         return PowerAction::None;
     }
     if (die_shown) {
@@ -320,6 +338,7 @@ static void show_count(const ServerMessage &msg, uint32_t now) {
 // scrolling past (whole passes). Only over the eyes.
 static void show_screen(const ServerMessage &msg, uint32_t now) {
     end_screen();
+    end_spell();
     if (routine_shown()) return;
     screen_ms = kScreenMs;
     screen_moves = false;
@@ -331,6 +350,33 @@ static void show_screen(const ServerMessage &msg, uint32_t now) {
     }
     screen_since = now;
     lv_obj_set_hidden(eyes_shown, screen_shown);
+}
+
+// A word Cubey spells, before its speech: its letters big, one by one as its voice says them (spell.at), from its
+// first in place of its eyes; then all of it passes. Only over the eyes, as a drawing, which it replaces.
+static void spell_word(const ServerMessage &msg, uint32_t now) {
+    end_spell();
+    if (routine_shown()) return;
+    letter::Shown shown = letter::spelling(msg.word);
+    if (shown.words.empty()) return;
+    end_screen();
+    spelling.emplace(static_cast<int>(shown.words.size()) - 1, letter::length(shown.words.back()));
+    spell_shown = spell::create(lv_obj_get_parent(eyes_shown), std::move(shown), &*spelling, now);
+    lv_obj_set_hidden(spell_shown, true);
+}
+
+// The word spelled: timed from when Cubey's speech began to play; once its turn is over (spoken, or not), any letter
+// not timed shows. Over, or a routine's picture shows, Cubey's eyes are back.
+static void follow_spell(uint32_t now) {
+    if (!spelling) return;
+    const VoiceState state = voice.state();
+    if (state == VoiceState::Speaking) spelling->speaking(now);
+    else if (!voice.is_open() || state == VoiceState::Listening || state == VoiceState::Idle) spelling->spoken(now);
+    if (routine_shown() || spelling->over(now)) return end_spell();
+    const bool shows = spelling->shown(now) > 0;
+    lv_obj_set_hidden(spell_shown, !shows);
+    if (shows) lv_obj_set_hidden(eyes_shown, true);
+    spell::show(spell_shown, now);
 }
 
 static void follow_screen(uint32_t now) {
@@ -358,6 +404,11 @@ static void server_message(const ServerMessage &msg, const std::string &json, ui
     if (msg.type == "letter") return show_letter(msg, now);
     if (msg.type == "count") return show_count(msg, now);
     if (msg.type == "show") return show_screen(msg, now);
+    if (msg.type == "spell") return spell_word(msg, now);
+    if (msg.type == "spell.at") {
+        if (spelling && msg.ms >= 0) spelling->said(msg.i, static_cast<uint32_t>(msg.ms));
+        return;
+    }
     if (msg.type == "dice" && !brushing && !timer && !cards_shown) {
         if (battery_shown) lv_obj_delete(battery_shown);
         battery_shown = nullptr;
@@ -499,7 +550,7 @@ static void follow_server(uint32_t now) {
     if (lost_shown) {
         lv_obj_delete(lost_shown);
         lost_shown = nullptr;
-        if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || screen_shown);
+        if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
         return;
     }
     fine::Frame f;
@@ -590,6 +641,7 @@ static void step(lv_timer_t *) {
     if (letter_shown) letter::show(letter_shown, now);
     if (count_shown) count::show(count_shown, now);
     follow_screen(now);
+    follow_spell(now);
     follow_upright(down, now);
     if (eyes_shown) eyes::set_shut(eyes_shown, !hal::link_connected()); // nobody to talk to
 }

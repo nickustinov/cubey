@@ -10,7 +10,7 @@ namespace {
 constexpr int kScale = 2;
 constexpr int kTop = (dots::kBoard - font::kCapitalRows * kScale) / 2 - font::kCapitalTop * kScale; // capitals in the middle
 
-int wide(const font::Letter &letter) { return static_cast<int>(letter.rows[0].size()); }
+int wide(const font::Letter *letter) { return static_cast<int>(letter->rows[0].size()); }
 
 // Where the word's first column is with its letter i in the middle (the font's column between letters, two dots).
 int stop(const Word &word, int i) {
@@ -23,10 +23,10 @@ int stop(const Word &word, int i) {
 std::optional<Word> drawn(const std::string &utf8, const std::string &stop_on) {
     Word word{{}, -1};
     for (const std::string &name : font::split(utf8)) {
-        auto letter = font::letter(font::upper(name));
+        const font::Letter *letter = font::letter(font::upper(name));
         if (!letter) return std::nullopt;
         if (name == stop_on) word.at = static_cast<int>(word.letters.size());
-        word.letters.push_back(std::move(*letter));
+        word.letters.push_back(letter);
     }
     if (word.at < 0) return std::nullopt;
     return word;
@@ -35,7 +35,7 @@ std::optional<Word> drawn(const std::string &utf8, const std::string &stop_on) {
 // All of a word across, a column between its letters.
 int across(const Word &word) {
     int w = -1;
-    for (const font::Letter &letter : word.letters) w += wide(letter) + 1;
+    for (const font::Letter *letter : word.letters) w += wide(letter) + 1;
     return w * kScale;
 }
 
@@ -70,11 +70,11 @@ Board *board_of(lv_event_t *e) { return board_of(static_cast<lv_obj_t *>(lv_even
 } // namespace
 
 Shown start(const std::string &hers, const std::string &cubeys, const std::string &stop_on) {
-    auto alone = font::letter(font::upper(stop_on));
+    const font::Letter *alone = font::letter(font::upper(stop_on));
     if (!alone) return {};
     std::optional<Word> word = drawn(hers.empty() ? cubeys : hers, stop_on);
     if (word && !hers.empty()) word->from = 0, word->dot_ms = kHersDotMs;
-    return {{word ? std::move(*word) : Word{{std::move(*alone)}, 0}}, {0}, stop_on};
+    return {{word ? std::move(*word) : Word{{alone}, 0}}, {0}, stop_on};
 }
 
 bool go_on(Shown &shown, uint32_t ms, const std::string &cubeys, const std::string &stop_on) {
@@ -91,9 +91,39 @@ bool go_on(Shown &shown, uint32_t ms, const std::string &cubeys, const std::stri
 Shown text(const std::string &utf8) {
     Word word{{}, -1};
     for (const std::string &name : font::split(utf8))
-        if (const font::Letter *letter = font::letter(font::upper(name))) word.letters.push_back(*letter);
+        if (const font::Letter *letter = font::letter(font::upper(name))) word.letters.push_back(letter);
     if (word.letters.empty()) return {};
     return {{std::move(word)}, {0}, ""};
+}
+
+Shown spelling(const std::string &utf8) {
+    Shown shown;
+    Word all{{}, -1};
+    for (const std::string &name : font::split(utf8)) {
+        const font::Letter *letter = font::letter(font::upper(name));
+        if (!letter) return {};
+        all.letters.push_back(letter);
+        shown.words.push_back({all.letters, static_cast<int>(all.letters.size()) - 1, -1, kSpellDotMs});
+        shown.starts.push_back(0);
+    }
+    if (all.letters.empty()) return {};
+    shown.words.push_back(std::move(all));
+    shown.starts.push_back(0);
+    return shown;
+}
+
+Frame spelled(const Shown &spelling, int said, uint32_t ms) {
+    const int last = said - 1;
+    const Word &word = spelling.words[static_cast<size_t>(last)];
+    const int end = stop(word, last);
+    if (!last) return {0, end, dots::Dot::Dim, false};
+    const int from = stop(word, last - 1);
+    return {last, std::max(end, from - static_cast<int>(ms / word.dot_ms)), dots::Dot::Dim, false};
+}
+
+Frame passing(const Shown &spelling, uint32_t ms) {
+    const int all = static_cast<int>(spelling.words.size()) - 1;
+    return one(spelling.words.back(), all, ms);
 }
 
 uint32_t length(const Word &word) {
@@ -114,10 +144,10 @@ dots::Dot dot(const Shown &shown, const Frame &frame, int col, int row) {
     int x = col - frame.left;
     if (x < 0 || row < kTop) return dots::Dot::Off;
     for (int i = 0; i < static_cast<int>(word.letters.size()); i++) {
-        const font::Letter &letter = word.letters[i];
+        const font::Letter *letter = word.letters[i];
         if (x < wide(letter) * kScale) {
-            const int y = (row - kTop) / kScale - letter.top;
-            if (y < 0 || y >= static_cast<int>(letter.rows.size()) || letter.rows[y][x / kScale] != '#') return dots::Dot::Off;
+            const int y = (row - kTop) / kScale - letter->top;
+            if (y < 0 || y >= static_cast<int>(letter->rows.size()) || letter->rows[y][x / kScale] != '#') return dots::Dot::Off;
             if (frame.arriving) return i == word.from ? dots::Dot::On : dots::Dot::Dim;
             return i == word.at ? dots::Dot::On : frame.rest;
         }

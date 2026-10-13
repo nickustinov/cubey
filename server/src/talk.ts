@@ -59,6 +59,7 @@ export function routineMessage(routine: Routine, args: { minutes?: unknown; for?
     case "chain":
     case "letters": return args.letter ? { type: "letter", letter: args.letter, ...(args.word && { word: args.word }) } : undefined;
     case "count": return args.number ? { type: "count", n: args.number } : undefined;
+    case "spell": return undefined; // its word as it is written, before its speech (cascade.ts)
     case "brightness": return undefined; // with its settings (session.ts)
     case "menu": return { type: "menu" };
     case "wifi": return { type: "wifi" };
