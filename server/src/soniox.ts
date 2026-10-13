@@ -142,7 +142,7 @@ export class Transcriber {
 }
 
 export type SpeakerOpts = {
-  voice: string;
+  voice: string | ((language: string) => string); // one for all its streams, or each language's own
   language: string;
   sampleRate: number;
   speed: number; // Soniox allows 0.7 to 1.3
@@ -185,7 +185,7 @@ export class Speaker {
       api_key: apiKey(),
       model: TTS_MODEL,
       language,
-      voice: this.opts.voice,
+      voice: typeof this.opts.voice === "string" ? this.opts.voice : this.opts.voice(language),
       audio_format: "pcm_s16le",
       sample_rate: this.opts.sampleRate,
       speed: this.opts.speed,

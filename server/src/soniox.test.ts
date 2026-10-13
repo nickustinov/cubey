@@ -223,6 +223,16 @@ describe("Speaker", () => {
     expect(heard).toHaveLength(2);
   });
 
+  test("a voice for each language: each stream in its language's voice", async () => {
+    const streams: Parameters<typeof fakeTts>[0] = [];
+    server = fakeTts(streams);
+    const speaker = new Speaker({ voice: (language) => `voice-${language}`, language: "lv", sampleRate: 24000, speed: 1, onAudio: () => {}, url: url() });
+    await speaker.say("Atkārto: ");
+    await speaker.say("chat", "fr");
+    await speaker.end();
+    expect(streams.map(({ voice, language }) => ({ voice, language }))).toEqual([{ voice: "voice-lv", language: "lv" }, { voice: "voice-fr", language: "fr" }]);
+  });
+
   // It connects while the child is still talking; a refused connection must not crash the server before
   // anything is said (an unhandled rejection ends the process), and saying something then fails.
   test("a refused connection fails what is said, and nothing else", async () => {

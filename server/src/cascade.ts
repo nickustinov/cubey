@@ -21,7 +21,12 @@ import { wordsOf } from "./soniox";
 import { SpokenLetters } from "./spelling";
 import { type Opened, routineMessage, type Talk, type TalkOut, type Talks } from "./talk";
 
-export const VOICE = "Russell"; // a Soniox voice (Daniel, Sebastian and Russell tried on 2026-10-10); it takes the cues in Cubey's words (cubey.ts)
+// Cubey's voice in each language: Soniox's voices each have an accent (Russell's American, Daniel's and Sebastian's
+// British: tried on 2026-10-10), so in a language Soniox has voices of, one with its accent, warm and friendly, male as
+// Russell (2026-10-13); Russell where it has none (Latvian, Lithuanian, Estonian, Finnish, the Nordic languages, Dutch).
+// Each takes the cues in Cubey's words (cubey.ts); the word game's words in the language it teaches go in that one's.
+const VOICES: Record<string, string> = { fr: "Julien", de: "Konrad", es: "Javier", it: "Marco", pt: "Rui", ru: "Vadim", uk: "Bohdan", pl: "Marek" };
+export const voiceFor = (language: string) => VOICES[language] ?? "Russell";
 const SPEED = 1.0; // Soniox allows 0.7 to 1.3; Russell at its own pace (1.1 until 2026-10-10)
 // Its voice four semitones higher, as a small robot's (2026-10-13; a ring modulator, a tin can and an old game's crush
 // were tried too): Soniox has no pitch, so it speaks slower by as much, and its speech is played back faster, its pace as
@@ -43,7 +48,7 @@ export type CascadeDeps = {
   listen: (opts: { child: Child; onHeard: () => void; onWords?: (soFar: string) => void; also?: string[]; waitMs?: number }) => Listener;
   // timestamps: whether to time what it says, asked with its first words; onCharacters: what it says as it times it
   speak: (opts: {
-    voice: string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void;
+    voice: (language: string) => string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void;
     timestamps?: () => boolean; onCharacters?: (characters: string[], seconds: number[]) => void;
   }) => Voice;
   complete: Complete;
@@ -402,7 +407,7 @@ class CascadeTalk implements Talk {
     return (this.speech = this.deps.speak({
       ...timed,
       ...(onCharacters && { onCharacters: (characters: string[], seconds: number[]) => onCharacters(characters, seconds.map((at) => at / PITCH)) }),
-      voice: VOICE, speed: SPEED / PITCH, language: this.child.language, sampleRate: this.out.rate,
+      voice: voiceFor, speed: SPEED / PITCH, language: this.child.language, sampleRate: this.out.rate,
       onAudio: (pcm) => {
         this.spoken += pcm.length; // made (and paid for), if no longer wanted
         if (generation !== this.generation) return;

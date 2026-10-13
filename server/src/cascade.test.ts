@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { expect, test } from "bun:test";
-import { type CascadeDeps, cascadeTalks, TALK_OVER_WORD_MS } from "./cascade";
+import { type CascadeDeps, cascadeTalks, TALK_OVER_WORD_MS, voiceFor } from "./cascade";
 import type { Child } from "./child";
 import { LESSON_STOPPED } from "./cubey";
 import type { Earlier } from "./history";
@@ -115,6 +115,12 @@ test("Cubey's hello: the model is told what happened, in Cubey's prompt with its
   expect(t.audio()).toBe(1);
   expect(t.texts).toEqual([{ type: "said", heard: "", said: "Čau, Anna!", last: false }]);
   expect(t.exchanges).toEqual([{ heard: "(Anna has just woken you.)", said: "Čau, Anna!", forParents: false }]);
+});
+
+// Soniox's voices each have an accent, Russell's American (2026-10-13): one of a language's own where it has some.
+test("Cubey's voice in each language: one with its accent where Soniox has one, Russell where it has none", () => {
+  expect(["fr", "de", "es", "it", "pt", "ru", "uk", "pl"].map(voiceFor)).toEqual(["Julien", "Konrad", "Javier", "Marco", "Rui", "Vadim", "Bohdan", "Marek"]);
+  expect(["en", "lv", "lt", "et", "fi", "sv", "da", "no", "nl"].map(voiceFor)).toEqual(Array(9).fill("Russell"));
 });
 
 // A small robot's voice (2026-10-13): Soniox has no pitch, so its speech is made slower and played back faster.
