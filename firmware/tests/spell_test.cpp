@@ -57,7 +57,7 @@ TEST_CASE("a letter timed before the one before it shows with it; one timed afte
     CHECK(run.shown(2000) == 3);
 }
 
-TEST_CASE("all said: still a moment, then the whole word passes twice and it is over; a word that fits stays still a while") {
+TEST_CASE("all said: still a moment, then the whole word passes once and it is over; a word that fits stays still a while") {
     SpellRun run(2, 1000);
     run.said(0, 0);
     run.said(1, 100);
@@ -65,8 +65,8 @@ TEST_CASE("all said: still a moment, then the whole word passes twice and it is 
     CHECK_FALSE(run.passing(100 + SpellRun::kHoldMs - 1));
     REQUIRE(run.passing(100 + SpellRun::kHoldMs));
     CHECK(*run.passing(100 + SpellRun::kHoldMs + 10) == 10);
-    CHECK_FALSE(run.over(100 + SpellRun::kHoldMs + 2 * 1000 - 1));
-    CHECK(run.over(100 + SpellRun::kHoldMs + 2 * 1000));
+    CHECK_FALSE(run.over(100 + SpellRun::kHoldMs + 1000 - 1));
+    CHECK(run.over(100 + SpellRun::kHoldMs + 1000));
 
     SpellRun still(1, 0);
     still.said(0, 0);

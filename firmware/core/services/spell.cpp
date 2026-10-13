@@ -59,7 +59,7 @@ std::optional<uint32_t> SpellRun::passing(uint32_t now) const {
 
 bool SpellRun::over(uint32_t now) const {
     const std::optional<uint32_t> ms = passing(now);
-    return ms && *ms >= (pass_ms_ ? kPasses * pass_ms_ : kStillMs);
+    return ms && *ms >= (pass_ms_ ? pass_ms_ : kStillMs);
 }
 
 } // namespace cubey

@@ -9,11 +9,10 @@ namespace cubey {
 // A word Cubey spells (ui/spell.h): its letters show one by one as its voice says them. The server says when each is
 // said, in ms into Cubey's speech (Soniox times what it speaks); the device knows when its speech began to play. A
 // letter never timed holds back those after it until the speech is over, then they all show. All shown: still a
-// moment, then the whole word passes twice (or stays still a while, if it fits), and it is over.
+// moment, then the whole word passes once (or stays still a while, if it fits), and it is over.
 class SpellRun {
 public:
     static constexpr uint32_t kHoldMs = 800;   // all said, before the whole word passes
-    static constexpr int kPasses = 2;
     static constexpr uint32_t kStillMs = 3000; // a word that fits, still instead
 
     // pass_ms: one pass of the whole word across the board (0: it fits, still)
