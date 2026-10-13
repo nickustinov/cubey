@@ -22,6 +22,7 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/semphr.h"
 
 namespace {
 
@@ -29,6 +30,27 @@ constexpr uint16_t kLines = 50; // LVGL draws in strips of this many lines, two 
 
 esp_lcd_panel_handle_t panel = nullptr;
 esp_lcd_panel_io_handle_t panel_io = nullptr;
+
+// The panel's DMA reads LVGL's strips straight from PSRAM, which it can't while flash is written (an update's,
+// update.cpp): the DMA ran dry, the SPI driver failed the strip, and esp_lcd, never counting it back, waited for it on
+// the next forever, and Cubey froze (2026-10-13). So they take turns: a strip waits for its turn and gives it back once
+// sent; a flash write takes it, so no strip is on its way meanwhile.
+SemaphoreHandle_t turn = nullptr;
+lv_display_t *shown = nullptr;
+constexpr TickType_t kTurnMost = pdMS_TO_TICKS(1000); // a flash write takes far less: longer, a strip's end was lost
+
+bool IRAM_ATTR strip_sent(esp_lcd_panel_io_handle_t, esp_lcd_panel_io_event_data_t *, void *) {
+    BaseType_t woken = pdFALSE;
+    xSemaphoreGiveFromISR(turn, &woken);
+    return esp_lv_adapter_display_notify_color_trans_done_from_isr(shown) || woken == pdTRUE;
+}
+
+esp_err_t send_strip(lv_display_t *, esp_lcd_panel_handle_t to, int x1, int y1, int x2, int y2, const void *pixels, void *) {
+    if (xSemaphoreTake(turn, kTurnMost) != pdTRUE) ESP_LOGW("display", "no turn for a strip: sent all the same");
+    const esp_err_t err = esp_lcd_panel_draw_bitmap(to, x1, y1, x2, y2, pixels);
+    if (err != ESP_OK) xSemaphoreGive(turn); // nothing on its way
+    return err;
+}
 
 // Waveshare's sequence for this panel (the BSP's): sleep out, its vendor page, SPI mode, RGB565, the tearing
 // line, brightness control at full, the 480 x 480 window, the picture turned (MADCTL 0xA0), display on.
@@ -179,6 +201,11 @@ void display_start() {
     lvgl.task_min_delay_ms = ESP_LV_ADAPTER_DEFAULT_TASK_MIN_DELAY_MS;
     lvgl.task_max_delay_ms = ESP_LV_ADAPTER_DEFAULT_TASK_MAX_DELAY_MS;
     ESP_ERROR_CHECK(esp_lv_adapter_init(&lvgl));
+    // A strip sent is the board's to hear (turn), and it tells the adapter.
+    turn = xSemaphoreCreateBinary();
+    ESP_ERROR_CHECK(turn ? ESP_OK : ESP_ERR_NO_MEM);
+    xSemaphoreGive(turn);
+    ESP_ERROR_CHECK(esp_lv_adapter_set_default_display_idf_callback_registration_enabled(false));
 
     esp_lv_adapter_display_config_t display = {};
     display.panel = panel;
@@ -191,7 +218,11 @@ void display_start() {
     display.profile.use_psram = true;
     display.profile.require_double_buffer = true;
     display.tear_avoid_mode = ESP_LV_ADAPTER_TEAR_AVOID_MODE_NONE;
-    lv_display_t *lv_display = esp_lv_adapter_register_display(&display);
+    lv_display_t *lv_display = shown = esp_lv_adapter_register_display(&display);
+    const esp_lv_adapter_draw_bitmap_callbacks_t sending = {.custom_draw_bitmap = send_strip};
+    ESP_ERROR_CHECK(esp_lv_adapter_set_draw_bitmap_callbacks(lv_display, &sending, nullptr));
+    const esp_lcd_panel_io_callbacks_t sent = {.on_color_trans_done = strip_sent};
+    ESP_ERROR_CHECK(esp_lcd_panel_io_register_event_callbacks(io, &sent, nullptr));
     lv_display_add_event_cb(lv_display, even_area, LV_EVENT_INVALIDATE_AREA, nullptr);
     lv_display_add_event_cb(lv_display, frame_started, LV_EVENT_REFR_START, nullptr);
     lv_display_add_event_cb(lv_display, frame_drawn, LV_EVENT_REFR_READY, nullptr);
@@ -209,6 +240,12 @@ void display_start() {
     esp_lv_adapter_register_touch(&pointer);
 
     ESP_ERROR_CHECK(esp_lv_adapter_start());
+}
+
+void flash_writing(bool writing) {
+    if (!turn) return;
+    if (writing) xSemaphoreTake(turn, portMAX_DELAY);
+    else xSemaphoreGive(turn);
 }
 
 void display_lock() { esp_lv_adapter_lock(-1); } // a negative timeout waits; 0 would not

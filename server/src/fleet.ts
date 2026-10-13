@@ -11,8 +11,15 @@ import { ParentLog } from "./log";
 import { Memory } from "./memory";
 
 export type Admitted = "ok" | "wrong key" | "blocked" | "no id";
-export type Device = { id: string; label?: string; created: string; seen?: string; online: boolean; blocked: boolean };
-type Row = { id: string; key_hash: string; label: string | null; created: string; seen: string | null; blocked: number };
+// Its firmware, as it said at its last hello: version and build (firmware.ts), and the build of an update that failed
+// there (rolled back from, or not fetched).
+export type Running = { version: string; build: string; failed?: string };
+// wanted: the build of an update asked for it, until it runs it or it failed there
+export type Device = { id: string; label?: string; created: string; seen?: string; online: boolean; blocked: boolean; firmware?: Running; wanted?: string };
+type Row = {
+  id: string; key_hash: string; label: string | null; created: string; seen: string | null; blocked: number; version: string | null; build: string | null;
+  failed: string | null; wanted: string | null;
+};
 
 const hashOf = (key: string) => createHash("sha256").update(key).digest();
 
@@ -23,6 +30,8 @@ export class Fleet {
   constructor(private db: Database, private data: string, private timeZone?: string, private stores: { forget(id: string): void }[] = []) {
     db.run(`CREATE TABLE IF NOT EXISTS devices (
       id TEXT PRIMARY KEY, key_hash TEXT NOT NULL, label TEXT, created TEXT NOT NULL, seen TEXT, blocked INTEGER NOT NULL DEFAULT 0)`);
+    const columns = (db.query("PRAGMA table_info(devices)").all() as { name: string }[]).map((c) => c.name);
+    for (const column of ["version", "build", "failed", "wanted"]) if (!columns.includes(column)) db.run(`ALTER TABLE devices ADD COLUMN ${column} TEXT`);
   }
 
   admit(id: string, key: string, now = new Date()): Admitted {
@@ -60,6 +69,26 @@ export class Fleet {
     renameSync(this.folder(id), join(this.data, "forgotten", `${id}-${now.toISOString().slice(0, 19).replace(/:/g, "-")}`));
   }
 
+  // Its hello: the firmware it runs. The update asked for it is over once it runs that build, or rolled back from it
+  // (a build it rolled back from is not offered to it again); one that failed stays failed until it runs it.
+  ran(id: string, running: Running) {
+    const row = this.row(id);
+    const over = row?.wanted === running.build || row?.wanted === running.failed;
+    const failed = running.failed ?? (row?.failed !== running.build ? row?.failed : null);
+    this.db.run("UPDATE devices SET version = ?, build = ?, failed = ?, wanted = ? WHERE id = ?",
+      [running.version, running.build, failed ?? null, over ? null : row?.wanted ?? null, id]);
+  }
+
+  // An update to this build, asked for it on the admin page: offered at its next hello (or at once, if it is on).
+  want(id: string, build: string) {
+    this.db.run("UPDATE devices SET wanted = ?, failed = NULL WHERE id = ?", [build, id]);
+  }
+
+  // It couldn't fetch or write the build asked for: not offered again until asked anew.
+  failed(id: string, build: string) {
+    this.db.run("UPDATE devices SET failed = ?, wanted = NULL WHERE id = ? AND wanted = ?", [build, id, build]);
+  }
+
   block(id: string, blocked: boolean) {
     this.db.run("UPDATE devices SET blocked = ? WHERE id = ?", [blocked ? 1 : 0, id]);
   }
@@ -82,7 +111,10 @@ export class Fleet {
   }
 
   private device(r: Row): Device {
-    return { id: r.id, ...(r.label && { label: r.label }), created: r.created, ...(r.seen && { seen: r.seen }), online: (this.online.get(r.id) ?? 0) > 0, blocked: !!r.blocked };
+    return {
+      id: r.id, ...(r.label && { label: r.label }), created: r.created, ...(r.seen && { seen: r.seen }), online: (this.online.get(r.id) ?? 0) > 0, blocked: !!r.blocked,
+      ...(r.version && r.build && { firmware: { version: r.version, build: r.build, ...(r.failed && { failed: r.failed }) } }), ...(r.wanted && { wanted: r.wanted }),
+    };
   }
 
   private folder(id: string) {

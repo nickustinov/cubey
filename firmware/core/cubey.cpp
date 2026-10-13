@@ -19,6 +19,7 @@
 #include "services/state_report.h"
 #include "services/timer.h"
 #include "services/ticks.h"
+#include "services/update.h"
 #include "services/upright.h"
 #include "services/voice.h"
 #include "ui/battery.h"
@@ -30,6 +31,7 @@
 #include "ui/ear.h"
 #include "ui/eyes.h"
 #include "ui/fine.h"
+#include "ui/happy_mac.h"
 #include "ui/letter.h"
 #include "ui/menu.h"
 #include "ui/mouth.h"
@@ -90,6 +92,9 @@ static Shake shake;
 static std::optional<uint32_t> finding_since; // Cubey asked her to find something: the talk waits while she looks
 constexpr uint32_t kFindMs = 3 * 60000;
 static Upright upright;       // which way is up, from the motion sensor
+static Updater updater;                    // an update the server offered: fetched once Cubey is free
+static lv_obj_t *update_shown = nullptr;   // the Happy Mac, over everything, while it is
+static uint32_t update_since = 0;
 static ScreenHold screen_hold; // held to talk: a finger held on the screen is her turn
 static lv_obj_t *ear_shown = nullptr; // ...and Cubey's ear in place of its eyes while it listens
 
@@ -137,7 +142,7 @@ static void sleep_screen() {
     dice.reset();
     finding_since.reset();
     spelling.reset();
-    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = nullptr;
+    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = update_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -154,7 +159,7 @@ static void wake_screen() {
     hal::screen(true);
     lv_obj_t *scr = new_screen(dots::ground());
     eyes_shown = eyes::create(scr);
-    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = nullptr;
+    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = update_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -428,10 +433,12 @@ static void follow_screen(uint32_t now) {
 // much is left; brushing, its mouth, until the two minutes and the praise are over, or she stops; her word game.
 static void server_message(const ServerMessage &msg, const std::string &json, uint32_t now) {
     if (msg.type == "reset") return hal::wipe();
+    if (msg.type == "update") return updater.offer(msg.build); // asleep too: it waits for Cubey to wake
     if (msg.type == "settings") { // to its hello, asleep too
         if (msg.brightness) hal::brightness(brightness_shown = msg.brightness);
         if (msg.volume) hal::volume(volume_shown = msg.volume);
         if (!msg.theme.empty() && !settings_menu.is_open()) theme(msg.theme);
+        hal::firmware_good(); // it talks with the server: a new firmware on trial is kept
         voice.set_hold(msg.hold);
         return settings_menu.known(msg.languages, {msg.language, msg.theme, msg.brightness ? msg.brightness : 100, msg.volume ? msg.volume : 100, msg.hold},
                                    msg.fresh);
@@ -555,6 +562,7 @@ static void show_menu() {
 
 // A grown-up asked Cubey for its menu or its Wi-Fi setup: it opens once Cubey has said so.
 static void follow_asked(uint32_t now) {
+    if (updater.running()) return;
     if (asked.empty() || (voice.is_open() && !voice.her_turn())) return;
     if (power.asleep() || settings_menu.is_open() || wifi_setup.is_open()) return asked.clear();
     if (asked == "wifi") open_wifi(false, now);
@@ -565,7 +573,7 @@ static void follow_asked(uint32_t now) {
 // The grown-ups' menu: "–" held alone opens it, or a grown-up asking Cubey for it (follow_asked); a new Cubey's opens
 // by itself, once its Wi-Fi is set up and the server has said its languages, before Cubey's first word.
 static void follow_menu(const Keys &keys, uint32_t now) {
-    if (power.asleep()) return;
+    if (power.asleep() || updater.running()) return;
     SettingsMenu::Event event = settings_menu.keys(keys, now);
     if (wifi_setup.is_open()) return; // its own keys
     if (event == SettingsMenu::Event::None) event = settings_menu.offer(now);
@@ -586,7 +594,7 @@ static void follow_menu(const Keys &keys, uint32_t now) {
 // On a network, the server not answering a minute (down, or this Cubey blocked): "no server" says so, in place of shut
 // eyes and nothing else; gone once it answers, or the Wi-Fi setup opens.
 static void follow_server(uint32_t now) {
-    const bool lost = !power.asleep() && hal::wifi() == Wifi::Joined && !hal::link_connected() && !wifi_setup.is_open();
+    const bool lost = !power.asleep() && hal::wifi() == Wifi::Joined && !hal::link_connected() && !wifi_setup.is_open() && !updater.running();
     if (!lost) lost_since = 0;
     else if (!lost_since) lost_since = now ? now : 1;
     const bool show = lost_since && since(now, lost_since) >= kLostMs;
@@ -608,7 +616,7 @@ static void follow_server(uint32_t now) {
 // The Wi-Fi setup: by itself once Cubey wakes with no network (none kept, or the one kept not joined a while), or "+"
 // held alone (follow_menu); "+" and "–" scroll its networks. Joined, it closes and the talk opens.
 static void follow_wifi(const Keys &keys, uint32_t now) {
-    if (power.asleep()) return;
+    if (power.asleep() || updater.running()) return;
     const Wifi state = hal::wifi();
     if (!wifi_offered && (state == Wifi::Unset || (state != Wifi::Joining && state != Wifi::Joined && since(now, woke_at) >= kWifiFailedMs))) {
         wifi_offered = true;
@@ -621,11 +629,12 @@ static void follow_wifi(const Keys &keys, uint32_t now) {
     wifi_view::show(wifi_shown, wifi_setup, now);
 }
 
-// Awake, a talk is always open while the server is there and has said its languages (but while a timer runs, or the
-// grown-ups' menu or the Wi-Fi setup is open): its goodbye, or half a quiet minute, put Cubey to sleep; lost with the
-// server, it goes on once it is back.
+// Awake, a talk is always open while the server is there and has said its languages (but while a timer runs, the
+// grown-ups' menu or the Wi-Fi setup is open, or an update is offered): its goodbye, or half a quiet minute, put Cubey
+// to sleep; lost with the server, it goes on once it is back.
 static void follow_talk(uint32_t now) {
     if (power.asleep() || voice.is_open() || timer || die_shown || settings_menu.is_open() || wifi_setup.is_open() || !settings_menu.ready()) return;
+    if (updater.waiting() || updater.running()) return;
     switch (voice.ended()) {
     case TalkEnd::Goodbye:
     case TalkEnd::Quiet: return on_power(power.sleep());
@@ -671,6 +680,7 @@ static lv_indev_t *finger() {
 // her word game). While it listens, Cubey's ear shows in place of its eyes (not over a routine's picture: the cards she
 // answers about).
 static void follow_hold(uint32_t now) {
+    if (updater.running()) return;
     lv_indev_t *indev = finger();
     switch (screen_hold.follow(indev && lv_indev_get_state(indev) == LV_INDEV_STATE_PRESSED, now)) {
     case ScreenHold::Event::Held: voice.press(now); break;
@@ -690,12 +700,47 @@ static void follow_hold(uint32_t now) {
     }
 }
 
+// Free for an update: awake, nobody talking (her turn, or no talk), no routine going on, no menu or setup open.
+static bool free_for_update() {
+    return !power.asleep() && (!voice.is_open() || voice.her_turn()) && !brushing && !timer && !die_shown && !cards_shown && !settings_menu.is_open() &&
+           !wifi_setup.is_open();
+}
+
+// An update the server offered: once Cubey is free, the talk closes and the Happy Mac shows over everything while the
+// platform fetches it, a floppy going in and the bar filling; done, it winks and Cubey restarts into it; failed, it is
+// the Sad Mac a moment, the server hears, and Cubey's eyes are back.
+static void follow_update(uint32_t now) {
+    const UpdateProgress progress = updater.running() ? hal::update_progress() : UpdateProgress{};
+    switch (updater.step(free_for_update(), progress, now)) {
+    case Updater::Do::Start:
+        voice.close();
+        hal::update(updater.build());
+        update_since = now;
+        update_shown = happy_mac::create(lv_screen_active());
+        if (eyes_shown) lv_obj_set_hidden(eyes_shown, true);
+        break;
+    case Updater::Do::Restart: return hal::restart();
+    case Updater::Do::End: {
+        if (update_shown) lv_obj_delete(update_shown);
+        update_shown = nullptr;
+        if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
+        char msg[80];
+        snprintf(msg, sizeof msg, R"({"type":"update.failed","build":"%s"})", updater.failed().c_str());
+        if (hal::link_connected()) hal::link_send(msg);
+        return;
+    }
+    case Updater::Do::Nothing: break;
+    }
+    if (update_shown) happy_mac::show(update_shown, progress.state, progress.percent, since(now, update_since));
+}
+
 // Follows the power button, the talk and the battery shown; with no server for 45 seconds, Cubey sleeps. The battery
 // goes to the server as it changes.
 static void step(lv_timer_t *) {
     const uint32_t now = lv_tick_get();
-    on_power(power.press(hal::power_button(), now));
-    on_power(power.idle(now, voice.is_open() || timer || die_shown || settings_menu.is_open() || wifi_setup.is_open()));
+    const PowerPress pressed = hal::power_button();
+    if (!updater.running()) on_power(power.press(pressed, now)); // an update isn't stopped half-way
+    on_power(power.idle(now, voice.is_open() || timer || die_shown || settings_menu.is_open() || wifi_setup.is_open() || updater.running()));
     voice.tick(now, [now](const ServerMessage &msg, const std::string &json) { server_message(msg, json, now); });
     if (hal::link_connected())
         if (auto report = state_report.next(hal::battery(), hal::link_session())) hal::link_send(*report);
@@ -719,6 +764,7 @@ static void step(lv_timer_t *) {
     follow_spell(now);
     follow_upright(down, now);
     follow_hold(now);
+    follow_update(now);
     if (eyes_shown) eyes::set_shut(eyes_shown, !hal::link_connected()); // nobody to talk to
 }
 

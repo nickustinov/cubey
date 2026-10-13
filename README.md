@@ -189,6 +189,17 @@ Set the provider keys you have: `GEMINI_API_KEY`, `OPENAI_API_KEY` or both. Your
 
 After changing `sdkconfig.local`, delete `firmware/platforms/esp32/sdkconfig` so the build picks it up.
 
+### Updating cubes over the air
+
+Once flashed over USB, a cube updates over Wi-Fi: build, then upload the build to your server, and ask its Cubeys to update on the admin page (one, or all of them):
+
+```sh
+idf.py -C firmware/platforms/esp32 -B build/esp32 build
+cd server && bun run release https://<your-app>.fly.dev    # or upload build/esp32/cubey.bin on the admin page
+```
+
+A cube asked to update waits until it is awake and nobody is talking, then shows the Happy Mac while it fetches the new firmware (a floppy going in, the old progress bar filling), winks, and restarts into it. It keeps the new firmware once it talks with the server again; if it crashes, or can't reach the server within five minutes, it goes back to the one before, and the admin page says that build failed there. A cube asleep updates when it is next woken. The two app slots this needs came with updates: a cube flashed before them needs one last flash over USB.
+
 ### A new cube's first start
 
 A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick a network, type the password. The server meets it for the first time, keeps its key, and opens its language menu: the language Cubey speaks. Then Cubey introduces itself and asks the child's name. Every cube runs the same firmware; each has its own child, history and parents' log on the server.
@@ -202,6 +213,7 @@ A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick 
 - a Cubey's talks, word for word, with the big questions marked
 - its child's name, age and languages, its theme, brightness and volume, how the child talks to it (hands-free or holding its screen), its name, blocking it
 - a full reset, which wipes a Cubey on the server and, if it's on, the cube itself
+- its firmware: each Cubey's version, a build uploaded there, and an update asked for one Cubey or all of them
 - where the money goes: by day, by Cubey and by kind (listening, speaking, each model)
 
 `cd server && bun run log` prints the parents' log in the terminal.

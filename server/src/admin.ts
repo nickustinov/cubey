@@ -2,19 +2,22 @@
 // The models Cubey thinks with, one for each job (models.ts); the Cubeys: each one's child, whether it is online or when
 // it was last seen, what it cost (spending.ts), and where the
 // money goes (graphs by day, by Cubey and by kind, drawn here as SVG: no script on the page); a Cubey's
-// page: its talks (its parents' log), its child and settings to change, its name, blocking it, a full reset. The password once, then
+// page: its talks (its parents' log), its child and settings to change, its name, blocking it, a full reset; its firmware,
+// a build uploaded here and an update asked for one Cubey or all (firmware.ts). The password once, then
 // a cookie only the server can make (an HMAC of the password), HttpOnly, Secure, SameSite=Strict, for 30 days.
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ageOf, type Child, LANGUAGE_NAMES, LANGUAGES, PARENTS, THEMES, yearsOf } from "./child";
+import type { Firmware } from "./firmware";
 import type { Device, Fleet } from "./fleet";
 import { LESSON_LANGUAGES, languageName } from "./lesson";
 import { type Job, JOBS, MODELS, type Models } from "./models";
 import type { Spend, Spending, Spends } from "./spending";
 
-// wipe: tells a Cubey that is on to wipe itself; changed: tells it its settings anew (server.ts)
+// wipe: tells a Cubey that is on to wipe itself; changed: tells it its settings anew; update: offers it the update asked
+// for it, if it is on (server.ts)
 type Deps = {
-  password?: string; fleet: Fleet; spending: Spending; models: Models; wipe?: (id: string) => void; changed?: (id: string) => void; now?: () => Date;
-  wait?: (ms: number) => Promise<void>;
+  password?: string; fleet: Fleet; spending: Spending; models: Models; firmware: Firmware; wipe?: (id: string) => void; changed?: (id: string) => void;
+  update?: (id: string) => void; now?: () => Date; wait?: (ms: number) => Promise<void>;
 };
 
 const COOKIE = "cubey_admin";
@@ -160,12 +163,43 @@ export function admin(deps: Deps): (req: Request) => Promise<Response> {
       return `<a class="card" href="/admin/d/${h(d.id)}"><div class="row"><b>${h(titleOf(d, child))}</b>
 <span class="${d.online ? "on" : "dim"}">${d.online ? "● online" : `seen ${since(d.seen, now())}`}</span></div>
 <div>${h(childLine(child))}${d.blocked ? ' <span class="badge">blocked</span>' : ""}</div>
-<div class="dim">${spendsLine(spending.of(d.id, now()))} · ${h(d.id)}</div></a>`;
+<div class="dim">${spendsLine(spending.of(d.id, now()))} · ${h(d.id)}${firmwareNote(d)}</div></a>`;
     });
     return page("Cubeys", `<div class="row"><h1>Cubeys</h1><form method="post" action="/admin/logout"><button>Out</button></form></div>
 <p class="dim">All of them: ${spendsLine(spending.of(undefined, now()))} · <a href="/admin/spending">where it goes</a></p>${cards.join("") || '<p class="dim">None yet: a Cubey shows here once it has met the server.</p>'}
 <p class="dim">A new Cubey: flash it, join it to Wi-Fi on its own screens (“+” held 5 s), and it is here; it gets to know its child by talking.</p>
-${modelsForm()}`);
+${modelsForm()}${firmwareCard()}`);
+  };
+
+  // Its firmware, on its card: the version it runs, and an update asked for it.
+  const firmwareNote = (d: Device) => {
+    const wanted = d.wanted && deps.firmware.current()?.build === d.wanted ? deps.firmware.current()!.version : undefined;
+    return (d.firmware ? ` · firmware ${h(d.firmware.version)}` : "") + (wanted ? ` · <span class="on">update to ${h(wanted)} waiting</span>` : "");
+  };
+  // Not running the build kept: offered it (a Cubey from before updates says nothing of its firmware, and can't); not
+  // where it failed (it went back to the one before): it would fail again, a new build is the way.
+  const behind = (d: Device) => {
+    const kept = deps.firmware.current();
+    return !!kept && !!d.firmware && d.firmware.build !== kept.build && d.firmware.failed !== kept.build;
+  };
+  const askUpdate = (id: string) => {
+    fleet.want(id, deps.firmware.current()!.build);
+    deps.update?.(id);
+  };
+
+  const firmwareCard = () => {
+    const kept = deps.firmware.current();
+    const about = kept ? `${h(kept.version)}, built ${h(kept.built)} · uploaded ${h(kept.uploaded.slice(0, 10))}` : '<span class="dim">None uploaded yet.</span>';
+    const all = fleet.list().some(behind) ? '<form method="post" action="/admin/update"><p><button>Update all</button></p></form>' : "";
+    return `<h2>Firmware</h2><div class="card"><div>${about}</div>${all}
+<form method="post" action="/admin/firmware" enctype="multipart/form-data"><p><input type="file" name="firmware" accept=".bin"></p><p><button>Upload</button></p></form>
+<p class="dim">build/esp32/cubey.bin, or <code>bun run release</code>. A Cubey asked to update fetches it once it is free, shows a Happy Mac while it does, and keeps it once it talks with the server again (else it goes back to the one before).</p></div>`;
+  };
+
+  const uploadFirmware = async (req: Request) => {
+    const file = (await req.formData()).get("firmware");
+    const kept = file instanceof Blob ? deps.firmware.keep(new Uint8Array(await file.arrayBuffer()), now()) : undefined;
+    return kept ? redirect("/admin") : page("Firmware", '<p><a href="/admin">← Cubeys</a></p><h1>Not Cubey\'s firmware</h1><p class="dim">Upload build/esp32/cubey.bin.</p>', 400);
   };
 
   // Where the money goes, the last so many days (UTC): by day, by Cubey, by kind, and a table of what was used.
@@ -237,9 +271,20 @@ ${modelsForm()}`);
 <label>Time zone</label><input name="timeZone" value="${h(child.timeZone)}">
 <label>Blocked</label><input type="checkbox" name="blocked"${device.blocked ? " checked" : ""} style="width:auto">
 <span></span><p><button>Keep</button></p></form>
+<h2>Firmware</h2><div class="card">${firmwareDetail(device)}</div>
 <h2>Talks</h2><div class="card">${talks.join("") || '<p class="dim">None yet.</p>'}</div>
 <h2>Full reset</h2><form method="post" action="/admin/d/${h(id)}/reset" class="card" onsubmit="return confirm('Full reset? This Cubey forgets its child, their talks, its languages and, if it is on, its Wi-Fi. It cannot be undone.')">
 <p class="dim">To set it up anew: it knows no one, its parents’ log kept aside on the server. On now, it forgets its Wi-Fi too and starts at its welcome; off, it starts over when next on.</p><button>Full reset</button></form>`);
+  };
+
+  // What a Cubey runs, the update asked for it or one that failed there, and the button for the build kept.
+  const firmwareDetail = (device: Device) => {
+    const kept = deps.firmware.current();
+    const runs = device.firmware ? `Runs ${h(device.firmware.version)} (build ${h(device.firmware.build)})` : "Not known: a Cubey from before updates says nothing of it";
+    const failed = device.firmware?.failed ? `<div class="dim">An update (build ${h(device.firmware.failed)}) failed there: it went back to the one before.</div>` : "";
+    const waiting = device.wanted && kept?.build === device.wanted ? `<div class="on">Update to ${h(kept.version)} waiting: it fetches it once it is free.</div>` : "";
+    const button = behind(device) && !waiting ? `<form method="post" action="/admin/d/${h(device.id)}/update"><p><button>Update to ${h(kept!.version)}</button></p></form>` : "";
+    return `<div>${runs}</div>${failed}${waiting}${button}`;
   };
 
   const save = async (id: string, req: Request) => {
@@ -269,9 +314,17 @@ ${modelsForm()}`);
     if (req.method === "POST" && path === "/admin/logout") return redirect("/admin", { "set-cookie": `${COOKIE}=; Path=/admin; Max-Age=0; HttpOnly; Secure; SameSite=Strict` });
     if (path === "/admin") return list();
     if (req.method === "POST" && path === "/admin/models") return chooseModels(req);
+    if (req.method === "POST" && path === "/admin/firmware") return uploadFirmware(req);
+    if (req.method === "POST" && path === "/admin/update") return fleet.list().filter(behind).forEach((d) => askUpdate(d.id)), redirect("/admin");
     if (path === "/admin/spending") return where(Math.min(365, Math.max(1, Number(new URL(req.url).searchParams.get("days")) || 30)));
     const reset = /^\/admin\/d\/([a-z0-9]{1,32})\/reset$/i.exec(path)?.[1];
     if (reset && req.method === "POST") return deps.wipe?.(reset), fleet.forget(reset), redirect("/admin");
+    const update = /^\/admin\/d\/([a-z0-9]{1,32})\/update$/i.exec(path)?.[1];
+    if (update && req.method === "POST") {
+      const device = fleet.get(update);
+      if (device && behind(device)) askUpdate(update);
+      return redirect(`/admin/d/${encodeURIComponent(update)}`);
+    }
     const id = /^\/admin\/d\/([a-z0-9]{1,32})$/i.exec(path)?.[1];
     if (!id) return page("Cubey", "<h1>Not here</h1>", 404);
     return req.method === "POST" ? save(id, req) : detail(id);

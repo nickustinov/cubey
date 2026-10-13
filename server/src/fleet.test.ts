@@ -66,3 +66,36 @@ test("which are online now, and when each was last seen", () => {
   fleet.name("a", "Annas Kubijs");
   expect(fleet.list()[0].label).toBe("Annas Kubijs");
 });
+
+test("its firmware, as it said at its last hello; an update asked for it, until it runs that build or it failed there", () => {
+  const fleet = new Fleet(new Database(":memory:"), dir());
+  fleet.admit("a", "k");
+  expect(fleet.get("a")).not.toHaveProperty("firmware");
+  fleet.ran("a", { version: "a1b92ab", build: "0123456789abcdef" });
+  expect(fleet.get("a")?.firmware).toEqual({ version: "a1b92ab", build: "0123456789abcdef" });
+  fleet.want("a", "fedcba9876543210");
+  expect(fleet.get("a")?.wanted).toBe("fedcba9876543210");
+  fleet.ran("a", { version: "a1b92ab", build: "0123456789abcdef", failed: "fedcba9876543210" }); // rolled back from it
+  expect(fleet.get("a")).not.toHaveProperty("wanted");
+  expect(fleet.get("a")?.firmware?.failed).toBe("fedcba9876543210");
+  fleet.want("a", "fedcba9876543210");
+  fleet.ran("a", { version: "b2c3d4e", build: "fedcba9876543210" }); // it runs it now
+  expect(fleet.get("a")).not.toHaveProperty("wanted");
+  expect(fleet.get("a")?.firmware).toEqual({ version: "b2c3d4e", build: "fedcba9876543210" });
+  fleet.want("a", "1111111111111111");
+  fleet.failed("a", "1111111111111111"); // it couldn't fetch it
+  expect(fleet.get("a")).not.toHaveProperty("wanted");
+  fleet.ran("a", { version: "b2c3d4e", build: "fedcba9876543210" }); // its hello after: still failed there
+  expect(fleet.get("a")?.firmware?.failed).toBe("1111111111111111");
+  fleet.want("a", "1111111111111111"); // asked anew
+  expect(fleet.get("a")?.firmware).not.toHaveProperty("failed");
+});
+
+test("a Cubey's firmware is kept in a database from before there were updates", () => {
+  const db = new Database(":memory:");
+  db.run("CREATE TABLE devices (id TEXT PRIMARY KEY, key_hash TEXT NOT NULL, label TEXT, created TEXT NOT NULL, seen TEXT, blocked INTEGER NOT NULL DEFAULT 0)");
+  db.run("INSERT INTO devices (id, key_hash, created) VALUES ('a', 'x', '2026-10-01')");
+  const fleet = new Fleet(db, dir());
+  fleet.ran("a", { version: "a1b92ab", build: "0123456789abcdef" });
+  expect(fleet.get("a")?.firmware?.version).toBe("a1b92ab");
+});

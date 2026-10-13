@@ -20,9 +20,12 @@ CONFIG_LV_CACHE_DEF_SIZE=1048576
 CONFIG_LV_BUILD_EXAMPLES=n
 CONFIG_LV_BUILD_DEMOS=n
 
-# NVS and one app (partitions.csv).
+# NVS, two app slots and esp-sr's models (partitions.csv).
 CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+# Updates over the air (main/update.cpp): a new app is on trial until it talks with the server; restarted before (it
+# crashed, or never got there), the bootloader goes back to the one before.
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
 
 # As Waveshare's demos: code and read-only data from PSRAM, 64-byte data cache lines, code built for speed.
 CONFIG_SPIRAM_XIP_FROM_PSRAM=y

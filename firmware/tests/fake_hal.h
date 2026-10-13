@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "services/update.h"
 #include "services/wifi_setup.h"
 
 // A scriptable platform for tests: set what the "server" and "speaker" do, read what the core sent.
@@ -24,6 +25,7 @@ struct Hal {
     bool scanned = false;                   // the last has finished, with these
     std::vector<cubey::Network> networks;
     std::vector<std::pair<std::string, std::string>> joined; // networks asked to join, with their passwords
+    cubey::Firmware firmware;                // what it runs (none: a platform without updates)
 };
 
 extern Hal hal;

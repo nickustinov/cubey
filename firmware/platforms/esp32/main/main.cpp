@@ -9,6 +9,7 @@ extern "C" void app_main() {
         ESP_ERROR_CHECK(nvs_flash_erase());
         ESP_ERROR_CHECK(nvs_flash_init());
     }
+    cubey::board::update_start(); // a new firmware on trial
     cubey::board::display_start();
     cubey::board::power_start(); // on the board's I2C bus
     cubey::board::keys_start();

@@ -25,3 +25,4 @@ void mac_turn(int quarters);
 void mac_shake();
 void mac_set_keys(bool plus, bool minus); // the board's "+" and "–", as held
 void mac_wifi_unset();                    // no network kept: the Wi-Fi setup welcomes
+void mac_update_fails();                  // a pretend update fails half-way (--update-fails), for the Sad Mac

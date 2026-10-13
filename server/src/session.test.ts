@@ -2,12 +2,13 @@ import { expect, test } from "bun:test";
 import type { Child } from "./child";
 import type { Opened, Talk, TalkOut } from "./talk";
 import { brushingNote, DICE_PUT_AWAY, diceNote, LESSON_STOPPED, timerNote } from "./cubey";
-import { Session } from "./session";
+import { type Offer, Session } from "./session";
 
 const anna: Child = { id: "Anna", name: "Anna", ageMonths: 42, timeZone: "Europe/Lisbon", gender: "girl", language: "lv", learns: "en", parents: "mum_dad" };
 
 // A session with a pretend Cubey: what the talk was asked, and what the device was sent.
-function session(talkOver?: boolean) {
+// offer: the update asked for this Cubey, offered at its hello
+function session(talkOver?: boolean, offer?: Offer) {
   const did: string[] = [];
   const opened: { opened: Opened; rate: number }[] = [];
   const sent: object[] = [];
@@ -26,6 +27,7 @@ function session(talkOver?: boolean) {
     close: () => void did.push("close"),
   };
   const settings = { language: "lv", new: true, brightness: 100, volume: 100, theme: "green", hold: false };
+  const ran: object[] = [], failed: string[] = [];
   const s = new Session({
     child: () => anna,
     settings: {
@@ -37,8 +39,9 @@ function session(talkOver?: boolean) {
     cubey: { open: (_, o, to) => (opened.push({ opened: o, rate: to.rate }), (out = to), talk) },
     send: { text: (msg) => void sent.push(msg), audio: () => {} },
     talkOver,
+    update: { ran: (running) => (ran.push(running), offer), failed: (build) => void failed.push(build) },
   });
-  return { s, did, opened, sent, settings, hear: (on: boolean) => void (hearing = on), out: () => out! };
+  return { s, did, opened, sent, settings, ran, failed, hear: (on: boolean) => void (hearing = on), out: () => out! };
 }
 
 test("the device opens Cubey's talk at its speaker's rate; again after a lost connection, it goes on", () => {
@@ -73,6 +76,28 @@ test("to its hello the device hears its languages for its menu; the menu's chang
   expect(t.settings).toMatchObject({ theme: "white", brightness: 40 });
   t.s.onText(JSON.stringify({ type: "settings", language: "en", hold: true })); // she holds its screen to talk
   expect(t.settings).toMatchObject({ hold: true });
+});
+
+test("its hello says its firmware: kept; an update asked for it is offered before its settings; one it couldn't fetch, kept", () => {
+  const offer = { build: "fedcba9876543210", version: "b2c3d4e" };
+  const t = session(undefined, offer);
+  t.s.onText(JSON.stringify({ type: "hello", speaker_rate: 16000, version: "a1b92ab", build: "0123456789abcdef", failed: "1111111111111111" }));
+  expect(t.ran).toEqual([{ version: "a1b92ab", build: "0123456789abcdef", failed: "1111111111111111" }]);
+  expect(t.sent.map((m) => (m as { type: string }).type)).toEqual(["talk_over", "update", "settings"]); // before a talk opens
+  expect(t.sent[1]).toEqual({ type: "update", ...offer });
+  t.s.onText(JSON.stringify({ type: "update.failed", build: "fedcba9876543210" }));
+  t.s.onText(JSON.stringify({ type: "update.failed", build: "../x" })); // no build
+  expect(t.failed).toEqual(["fedcba9876543210"]);
+  t.s.offer(offer); // asked for on the admin page while it is on
+  expect(t.sent.at(-1)).toEqual({ type: "update", ...offer });
+});
+
+test("a hello without its firmware (from before updates) says nothing of it", () => {
+  const t = session(undefined, { build: "fedcba9876543210", version: "b2c3d4e" });
+  t.s.onText(JSON.stringify({ type: "hello", speaker_rate: 16000 }));
+  t.s.onText(JSON.stringify({ type: "hello", speaker_rate: 16000, version: "a1b92ab", build: "not hex" }));
+  expect(t.ran).toEqual([]);
+  expect(t.sent.map((m) => (m as { type: string }).type)).toEqual(["talk_over", "settings", "talk_over", "settings"]);
 });
 
 test("asked for another colour: kept, and to the device with its settings, the talk going on", () => {

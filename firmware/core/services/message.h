@@ -13,7 +13,8 @@ namespace cubey {
 // none); for "show" a picture's rows or text; for
 // "settings" the language Cubey speaks, all it speaks, whether it is a new Cubey, not set up
 // (the grown-ups' menu), the screen's brightness and the speaker's volume in percent (0: not said), its theme
-// (ui/dots.h; none: not said) and whether the child holds its screen to talk.
+// (ui/dots.h; none: not said) and whether the child holds its screen to talk; for "update" the build offered and its
+// version.
 struct ServerMessage {
     std::string type; // "" for anything that isn't a message
     bool last = false;
@@ -33,6 +34,7 @@ struct ServerMessage {
     std::string theme;
     int i = -1, ms = -1;
     bool hold = false;
+    std::string build{}, version{};
 };
 
 ServerMessage parse_message(const std::string &json);

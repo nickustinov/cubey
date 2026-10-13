@@ -6,6 +6,7 @@
 #include "services/battery.h"
 #include "services/power_button.h"
 #include "services/settings_menu.h"
+#include "services/update.h"
 #include "services/wifi_setup.h"
 #include "services/upright.h"
 
@@ -56,5 +57,14 @@ void wifi_join(const std::string &ssid, const std::string &password);
 // A grown-up's full reset (the server's admin page): all it keeps (its network, its key) forgotten, and it starts
 // again, as flashed clean.
 void wipe();
+
+// Updates over the air: the firmware it runs (services/update.h); it talks with the server, so a new firmware on trial
+// is kept (restarted before, it goes back to the one before); an update the server offers, fetched from it into the
+// other slot on the platform's own, the link paused meanwhile, and how that goes; the restart into it.
+Firmware firmware();
+void firmware_good();
+void update(const std::string &build);
+UpdateProgress update_progress();
+void restart();
 
 } // namespace cubey::hal

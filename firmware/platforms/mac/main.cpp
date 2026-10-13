@@ -123,6 +123,7 @@ static int run_screenshot(int argc, char **argv) {
         else if (a == "--keys") steps.push_back({nullptr, PowerPress::None, {-1, -1}, argv[++i]});
         else if (a == "--speech") steps.push_back({nullptr, PowerPress::None, {-1, -1}, nullptr, atoi(argv[++i])});
         else if (a == "--no-wifi") mac_wifi_unset();
+        else if (a == "--update-fails") mac_update_fails();
         else if (a == "--turn") mac_turn(atoi(argv[++i]));
         else if (int x, y; a == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) steps.push_back({nullptr, PowerPress::None, {x, y}}), i++;
         else if (int x, y; a == "--hold" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) steps.push_back({nullptr, PowerPress::None, {x, y}, nullptr, 0, true}), i++;

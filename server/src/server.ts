@@ -1,6 +1,7 @@
 // Cubey's server: Cubeys connect to /device over a WebSocket (protocol in session.ts), each by its id and key (fleet.ts),
 // and talk with Cubey: through Soniox and a model (cascade.ts), or on Gemini Live (live.ts), as CUBEY_TALK says. Each
-// has its own child, parents' log and spending; /admin shows them all (admin.ts).
+// has its own child, parents' log and spending; /admin shows them all (admin.ts). A Cubey asked to update fetches the
+// firmware uploaded there from /firmware/<build>.bin, with its id and key as on /device (firmware.ts).
 //   bun run dev
 // It listens on this Mac only unless HOST and CUBEY_DEVICE_TOKEN are set, for a device on the Wi-Fi (access.ts).
 import { allowed, exposedWithoutToken } from "./access";
@@ -14,10 +15,12 @@ import { LIVE_MODEL, liveTalks } from "./live";
 import { completeWith } from "./llm";
 import { type Job, Models } from "./models";
 import { Speaker, Transcriber } from "./soniox";
+import { join } from "node:path";
 import { DATA, openDb } from "./db";
+import { Firmware, firmwareResponse } from "./firmware";
 import { Fleet } from "./fleet";
 import { History } from "./history";
-import { Session } from "./session";
+import { type Offer, Session } from "./session";
 import { Spending } from "./spending";
 
 const port = Number(process.env.PORT ?? 8788); // Puce's is 8787: both can run
@@ -52,6 +55,13 @@ for (const [missing, why] of [
 const history = new History(db), progress = new LessonProgress(db);
 const fleet = new Fleet(db, DATA, process.env.CUBEY_CHILD_TIMEZONE, [history, progress]);
 const spending = new Spending(db);
+const firmware = new Firmware(join(DATA, "firmware"));
+// The update asked for a Cubey, as an offer: the build kept now, unless it runs it already or it failed there.
+const offerFor = (id: string): Offer | undefined => {
+  const device = fleet.get(id), kept = firmware.current();
+  if (!kept || device?.wanted !== kept.build || device.firmware?.build === kept.build || device.firmware?.failed === kept.build) return undefined;
+  return { build: kept.build, version: kept.version };
+};
 // Each Cubey's connections, for a full reset (admin.ts): its talk ends here, and it wipes itself.
 const sockets = new Map<string, Set<ServerWebSocket<Data>>>();
 const wipe = (id: string) => {
@@ -60,6 +70,11 @@ const wipe = (id: string) => {
 const adminPage = admin({
   password: process.env.CUBEY_ADMIN_PASSWORD, fleet, spending, models, wipe,
   changed: (id) => sockets.get(id)?.forEach((ws) => ws.data.session?.sendSettings()), // its brightness and volume, at once
+  firmware,
+  update: (id) => {
+    const offer = offerFor(id);
+    if (offer) sockets.get(id)?.forEach((ws) => ws.data.session?.offer(offer));
+  },
 });
 const modelFor = (job: Job) => completeWith(() => models.model(job));
 const talks = TALK === "live"
@@ -83,10 +98,12 @@ Bun.serve<Data>({
     const path = new URL(req.url).pathname;
     if (path === "/health") return new Response("ok\n");
     if (path === "/admin" || path.startsWith("/admin/")) return adminPage(req);
-    if (path !== "/device") return new Response("Not here.\n", { status: 404 });
+    if (path !== "/device" && !path.startsWith("/firmware/")) return new Response("Not here.\n", { status: 404 });
     if (!allowed(req.headers.get("authorization"), token, server.requestIP(req)?.address)) return new Response("a device token, please\n", { status: 401 });
     const device = req.headers.get("x-cubey-device") ?? "", admitted = fleet.admit(device, req.headers.get("x-cubey-key") ?? "");
     if (admitted !== "ok") return log(`Cubey ${device || "with no id"} turned away: ${admitted}`), new Response(`${admitted}\n`, { status: 403 });
+    const fetched = firmwareResponse(firmware, path);
+    if (fetched) return log(`[${device.slice(-4)}] fetches ${path}: ${fetched.status}`), fetched;
     if (server.upgrade(req, { data: { device } })) return;
     return new Response("a WebSocket, please\n", { status: 426 });
   },
@@ -112,6 +129,7 @@ Bun.serve<Data>({
           colour: (theme) => void memory.colour(theme),
         },
         learn: (learned) => memory.learn(learned),
+        update: { ran: (running) => (fleet.ran(device, running), offerFor(device)), failed: (build) => fleet.failed(device, build) },
         spent: (spent) => spending.add(device, spent),
         cubey: talks,
         talkOver: TALK_OVER,

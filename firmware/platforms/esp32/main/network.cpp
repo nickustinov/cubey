@@ -46,6 +46,7 @@ std::atomic<bool> connected{false};
 std::atomic<bool> online{false};  // Wi-Fi has an address
 std::atomic<unsigned> session{0}; // counts connections to the server
 std::atomic<bool> restart_link{false};
+std::atomic<bool> paused{false}, stop_link{false}; // an update fetches over its own connection (update.cpp)
 std::atomic<cubey::Wifi> wifi_state{cubey::Wifi::Unset};
 // The network kept, and one being tried (under mu): kept only once joined, so a wrong password never loses the one
 // it had (it went back to that); network_task applies them, waiting for the last to let go.
@@ -172,14 +173,22 @@ std::string device_headers() {
     return std::string("X-Cubey-Device: ") + id + "\r\nX-Cubey-Key: " + key + "\r\n";
 }
 
-void start_link() {
+// The token, if the server wants one, and who it is: on the link, and on an update's fetch.
+const std::string &headers() {
     static const std::string headers = (strlen(CONFIG_CUBEY_DEVICE_TOKEN) ? std::string("Authorization: Bearer ") + CONFIG_CUBEY_DEVICE_TOKEN + "\r\n" : "") + device_headers();
+    return headers;
+}
+
+void close_link() {
     connected = false;
-    if (server) {
-        esp_websocket_client_stop(server);
-        esp_websocket_client_destroy(server);
-        server = nullptr;
-    }
+    if (!server) return;
+    esp_websocket_client_stop(server);
+    esp_websocket_client_destroy(server);
+    server = nullptr;
+}
+
+void start_link() {
+    close_link();
     xQueueReset(outbox);
     esp_websocket_client_config_t config = {};
     config.uri = CONFIG_CUBEY_SERVER_URL;
@@ -191,7 +200,7 @@ void start_link() {
     config.task_core_id_set = true;
     config.task_core_id = 0; // the link must not displace the speaker and the UI on core 1
     config.buffer_size = 4096;
-    config.headers = headers.c_str();
+    config.headers = headers().c_str();
     server = esp_websocket_client_init(&config);
     ESP_ERROR_CHECK(server ? ESP_OK : ESP_ERR_NO_MEM);
     ESP_ERROR_CHECK(esp_websocket_register_events(server, WEBSOCKET_EVENT_ANY, on_link, nullptr));
@@ -243,7 +252,8 @@ void network_task(void *) {
     bool awake = false;
     Packet packet;
     while (true) {
-        if (restart_link.exchange(false) && online) start_link();
+        if (stop_link.exchange(false)) close_link();
+        if (!paused && restart_link.exchange(false) && online) start_link();
         if (want_scan && esp_wifi_scan_start(nullptr, false) == ESP_OK) want_scan = false;
         if (want_join.exchange(false) || want_back.exchange(false)) {
             Login login;
@@ -381,6 +391,14 @@ void network_start() {
 }
 
 void link_send_audio(const int16_t *pcm, size_t samples) { enqueue(pcm, samples * sizeof(int16_t), true); }
+
+void link_pause(bool pause) {
+    paused = pause;
+    if (pause) stop_link = true;
+    else restart_link = true;
+}
+
+const std::string &server_headers() { return headers(); }
 
 } // namespace cubey::board
 

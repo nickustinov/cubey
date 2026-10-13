@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
 
 #include "driver/i2c_master.h"
 #include "esp_codec_dev.h"
@@ -14,6 +15,9 @@ namespace cubey::board {
 void display_start();
 void display_lock();
 void display_unlock();
+// Flash written (an update's, update.cpp): the panel's DMA reads PSRAM, which can't be read meanwhile, so the strip on
+// its way is waited for, and none goes until it is done.
+void flash_writing(bool writing);
 void backlight(bool on);
 void brightness(int percent); // 0..100, the AMOLED's own
 i2c_master_bus_handle_t i2c(); // the bus the power chip shares; nullptr if it failed
@@ -40,6 +44,12 @@ constexpr int kSpeakerVolume = 100; // the codec's output, 0..100, until the ser
 void network_start();
 void link_send_audio(const int16_t *pcm, size_t samples); // mic PCM to the server, while connected
 constexpr size_t kAudioPacketMost = 512;                    // samples in one: an echo-cancelling frame, 32 ms
+void link_pause(bool pause);          // the link closed while an update is fetched, and back after
+const std::string &server_headers(); // the server's token and who this Cubey is, as HTTP header lines
+
+// Updates over the air (update.cpp): a new firmware on trial, kept once it talks with the server; else, a few minutes
+// on, rolled back.
+void update_start();
 
 // The CPU's speed, and the AXP2101: the charger, the PWR button and switching off (power.cpp).
 void power_start();

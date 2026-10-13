@@ -28,6 +28,8 @@ ServerMessage parse_message(const std::string &json) {
     if (const char *text = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "text"))) out.text = text;
     if (const char *language = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "language"))) out.language = language;
     if (const char *theme = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "theme"))) out.theme = theme;
+    if (const char *build = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "build"))) out.build = build;
+    if (const char *version = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "version"))) out.version = version;
     const cJSON *item = nullptr;
     cJSON_ArrayForEach(item, cJSON_GetObjectItem(msg, "rows")) if (cJSON_IsString(item)) out.rows.emplace_back(item->valuestring);
     cJSON_ArrayForEach(item, cJSON_GetObjectItem(msg, "languages")) if (cJSON_IsString(item)) out.languages.emplace_back(item->valuestring);

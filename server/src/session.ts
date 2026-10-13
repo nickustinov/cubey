@@ -1,7 +1,10 @@
 // One connected device, over its WebSocket: Cubey's talk with the child (live.ts). It wakes to Cubey's hello, then
 // listens hands-free (or while she holds its screen) and Cubey answers, until a goodbye (hers, said back by Cubey) or
 // a quiet while puts it to sleep.
-//   device -> server: {"type":"hello", speaker_rate}  the rate it plays speech at
+//   device -> server: {"type":"hello", speaker_rate, version?, build?, failed?}   the rate it plays speech at; its
+//                                                       firmware (firmware.ts): its version, its build, and the build of
+//                                                       an update it rolled back from
+//                     {"type":"update.failed", build}   it couldn't fetch or write the update offered
 //                     {"type":"open", again?, timer?, for?, dice?}   Cubey woke: its hello; again: the device lost the
 //                                                       server mid-talk and goes on, without a hello; timer: "done"
 //                                                       or "stopped", the timer for `for` is, and Cubey says so
@@ -38,6 +41,10 @@
 //                                                       hold: she holds its screen to talk (false: hands-free)
 //   server -> device: {"type":"talk_over", on}          to its hello: whether she may talk over Cubey (CUBEY_TALK_OVER);
 //                                                       off, the mic rests while Cubey speaks and nothing ducks it
+//                     {"type":"update", build, version} an update asked for it (the admin page), to its hello (before its
+//                                                       settings: no talk opens) or at once: once it is free, it fetches
+//                                                       /firmware/<build>.bin, restarts into it, and keeps it once it
+//                                                       talks with the server again (else it rolls back)
 //                     {"type":"listening"}              every listen's
 //                     {"type":"heard"}                  she paused: the mic can rest
 //                     binary speech PCM at the device's rate
@@ -86,11 +93,15 @@ import type { Battery, Opened, Talk, Talks, TalkOut } from "./talk";
 import type { Exchanged } from "./log";
 import type { Learned } from "./memory";
 import type { Spent } from "./prices";
+import type { Running } from "./fleet";
 
 // hold: she holds its screen to talk, or hands-free
 export type Settings = { language: string; theme?: string; hold?: boolean };
 // new: a new Cubey's, not set up yet; theme: its screen's colours (child.ts)
 export type Known = Settings & { new: boolean; brightness: number; volume: number; theme: string; hold: boolean };
+// An update for a device: the build kept on the server (firmware.ts).
+export type Offer = { build: string; version: string };
+const BUILD = /^[0-9a-f]{16}$/;
 export type SessionDeps = {
   child: () => Child;
   // what the device's menu sets, and the brightness, volume and theme asked of Cubey (memory.ts)
@@ -101,6 +112,8 @@ export type SessionDeps = {
   talkOver?: boolean; // she may talk over Cubey (CUBEY_TALK_OVER, on unless 0)
   spent?: (spent: Spent) => void; // what its talks cost (spending.ts)
   learn?: (learned: Learned) => Child; // what the child told Cubey, kept in its memory (memory.ts)
+  // its firmware, as its hello says: kept, and the update asked for it, if any (fleet.ts); one it couldn't fetch
+  update?: { ran(running: Running): Offer | undefined; failed(build: string): void };
 };
 
 const kindOf = (kind: unknown): TimerFor => (TIMER_FOR.includes(kind as TimerFor) ? (kind as TimerFor) : "other");
@@ -112,6 +125,11 @@ export class Session {
 
   constructor(private deps: SessionDeps) {}
 
+  // An update asked for it while it is on (the admin page).
+  offer(offer: Offer) {
+    this.deps.send.text({ type: "update", ...offer });
+  }
+
   // To its hello, and when they change (its menu, by voice, on the admin page).
   sendSettings() {
     this.deps.send.text({ type: "settings", ...this.deps.settings.get(), languages: LANGUAGES });
@@ -121,7 +139,7 @@ export class Session {
     let msg: {
       type?: unknown; speaker_rate?: unknown; again?: unknown; battery?: unknown; charging?: unknown; part?: unknown; timer?: unknown;
       for?: unknown; minutes?: unknown; id?: unknown; dice?: unknown; n?: unknown; language?: unknown; theme?: unknown;
-      brightness?: unknown; volume?: unknown; hold?: unknown;
+      brightness?: unknown; volume?: unknown; hold?: unknown; version?: unknown; build?: unknown; failed?: unknown;
     };
     try {
       msg = JSON.parse(raw);
@@ -132,7 +150,15 @@ export class Session {
       case "hello":
         this.rate = Number(msg.speaker_rate) || this.rate;
         this.deps.send.text({ type: "talk_over", on: this.deps.talkOver !== false });
+        if (typeof msg.version === "string" && typeof msg.build === "string" && BUILD.test(msg.build)) {
+          const failed = typeof msg.failed === "string" && BUILD.test(msg.failed) ? msg.failed : undefined;
+          const offer = this.deps.update?.ran({ version: msg.version.slice(0, 32), build: msg.build, ...(failed && { failed }) });
+          if (offer) this.offer(offer);
+        }
         return this.sendSettings();
+      case "update.failed":
+        if (typeof msg.build === "string" && BUILD.test(msg.build)) this.deps.update?.failed(msg.build);
+        return;
       case "settings":
         if (!this.deps.settings.set({
           language: String(msg.language), ...(typeof msg.theme === "string" && { theme: msg.theme }), ...(typeof msg.hold === "boolean" && { hold: msg.hold }),

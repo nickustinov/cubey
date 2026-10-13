@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <deque>
 #include <mutex>
+#include <optional>
 
 #include "hal/hal.h"
 #include "lvgl.h"
@@ -175,6 +176,9 @@ static cubey::Wifi pretend_wifi = cubey::Wifi::Joined; // the UI thread's
 static std::string pretend_password;
 static uint32_t joining_from = 0, scan_from = 0;
 void mac_wifi_unset() { pretend_wifi = cubey::Wifi::Unset; }
+static std::optional<uint32_t> update_from; // a pretend update, fetched since (the UI thread's)
+static bool update_fails = false;
+void mac_update_fails() { update_fails = true; }
 static std::atomic<int> plus_presses{0}, minus_presses{0};
 void mac_set_keys(bool plus, bool minus) {
     if (plus && !plus_held) ++plus_presses;
@@ -246,6 +250,25 @@ Wifi wifi() {
     return pretend_wifi;
 }
 void wifi_scan() { scan_from = lv_tick_get(); }
+
+// No updates here: no build to tell the server. An update offered all the same is pretended, fetched in 4 s (or failing
+// half-way, --update-fails), for its screen; restarting into it, the simulator ends.
+Firmware firmware() { return {"simulator", "", ""}; }
+void firmware_good() {}
+void update(const std::string &build) {
+    printf("update: pretending to fetch %s\n", build.c_str());
+    update_from = lv_tick_get();
+}
+UpdateProgress update_progress() {
+    if (!update_from) return {};
+    const int percent = static_cast<int>(std::min<uint32_t>(100, (lv_tick_get() - *update_from) / 40));
+    if (update_fails && percent >= 60) return {UpdateState::Failed, 60};
+    return {percent < 100 ? UpdateState::Fetching : UpdateState::Done, percent};
+}
+void restart() {
+    printf("update: restarting into it: run it again\n");
+    exit(0);
+}
 
 // The simulator keeps nothing: it ends (--no-wifi starts it as flashed clean).
 void wipe() {

@@ -8,7 +8,8 @@
     "typecheck": "tsc --noEmit",
     "log": "bun scripts/log.ts",
     "latency": "bun scripts/latency.ts",
-    "lesson-pictures": "bun scripts/lesson-pictures.ts"
+    "lesson-pictures": "bun scripts/lesson-pictures.ts",
+    "release": "bun scripts/release.ts"
   },
   "dependencies": {
     "@google/genai": "^2.27.0"

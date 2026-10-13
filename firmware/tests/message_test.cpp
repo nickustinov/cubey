@@ -72,3 +72,10 @@ TEST_CASE("the languages for the grown-ups' menu: Cubey's, and all it speaks") {
     CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"hold":true})").hold); // held to talk
     CHECK_FALSE(s.hold);
 }
+
+TEST_CASE("an update the server offers: its build and version") {
+    const ServerMessage m = parse_message(R"({"type":"update","build":"0123456789abcdef","version":"b2c3d4e"})");
+    CHECK(m.type == "update");
+    CHECK(m.build == "0123456789abcdef");
+    CHECK(m.version == "b2c3d4e");
+}

@@ -32,15 +32,16 @@ server/                Bun + TypeScript: the talk, the models, the device protoc
   src/fleet.ts         the Cubeys, each by chip id and its own key; data under data/devices/<id>/
   src/history.ts       the talks before (SQLite); log.ts the parents' log
   src/admin.ts         the admin page; spending.ts and prices.ts what each Cubey costs
-  scripts/             log, latency and lesson-pictures tools (bun run …)
+  src/firmware.ts      the firmware build uploaded for updates over the air, served to a Cubey at /firmware/<build>.bin
+  scripts/             log, latency, lesson-pictures and release tools (bun run …)
 firmware/              C++17 + LVGL 9.6
   core/                plain C++17 and LVGL, no platform includes
     cubey.cpp          the runtime: awake or asleep, the talk, routines, the buttons
-    services/          logic without drawing: voice turns (hands-free or held to talk), talk-over detection, timers, brushing, dice, spelling, menu, Wi-Fi setup, keyboard
-    ui/                drawing on the dot board (dots.h): eyes, ear, mouth, dial, die, letters, spelling, cards, menu, Wi-Fi; font.cpp the dot font
+    services/          logic without drawing: voice turns (hands-free or held to talk), talk-over detection, updates, timers, brushing, dice, spelling, menu, Wi-Fi setup, keyboard
+    ui/                drawing on the dot board (dots.h): eyes, ear, the Happy Mac, mouth, dial, die, letters, spelling, cards, menu, Wi-Fi; font.cpp the dot font
   hal/hal.h            what core needs from a platform
   platforms/mac/       the simulator (SDL window, AVAudioEngine with echo cancelling, headless screenshots)
-  platforms/esp32/     the board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (esp-sr echo cancelling, CO5300 panel)
+  platforms/esp32/     the board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (esp-sr echo cancelling, CO5300 panel, updates in main/update.cpp)
   tests/               doctest unit tests against a fake HAL
 content/lesson/        the word game's curriculum and its pictures (Fluent Emoji, MIT: LICENSES.md)
 docs/                  design notes and README screenshots
@@ -71,13 +72,14 @@ With `HOST=0.0.0.0` and `CUBEY_DEVICE_TOKEN` in `server/.env` so the board can r
 cmake -S firmware -B build/firmware -G Ninja && cmake --build build/firmware   # simulator + tests
 ctest --test-dir build/firmware --output-on-failure                             # firmware tests
 build/firmware/platforms/mac/cubey-sim                                           # simulator window
-build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--hold X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--ms 1000]
+build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--hold X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--update-fails] [--ms 1000]
 
 cd server && bun run dev                                                         # server on ws://127.0.0.1:8788/device
 cd server && bun test && bunx tsc --noEmit                                       # server tests and types
 cd server && bun run log [count]                                                 # the parents' log
 cd server && bun run lesson-pictures                                             # fetch the word game's pictures into content/lesson/pictures/
 cd server && bun run latency [runs] ["question"]                                # the child's last word to Cubey's first sound, through the running server
+cd server && bun run release [server]                                            # the board's last build to a server, for its Cubeys to update to (admin page)
 
 fly deploy                                                                       # the server to Fly.io (fly.toml)
 fly logs                                                                         # its log
@@ -127,5 +129,6 @@ A routine is anything Cubey does besides talk. It travels from the model's answe
 - **The board's display.** The BSP sends LVGL's strips from PSRAM by copying each into internal RAM, which runs out ("Failed to allocate priv TX buffer"): `board_amoled_2_16.cpp` sets the CO5300 panel up itself, its DMA reading PSRAM directly. That BSP's `bsp_display_lock(0)` doesn't wait, and its config macros are C only.
 - **The board's internal RAM.** On the board an allocation under 1 KB comes from internal RAM, which Wi-Fi, TLS and the display need; 1 KB and more goes to PSRAM (`CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL`). Keep lasting data in a few large allocations, not many small ones: the dot font keeps its letters' rows as views of its glyphs' text in one store (`ui/font.cpp`).
 - **The board's link.** It sends `overhear` when its speech starts playing, often after the server has sent all of it (Soniox makes speech faster than it plays), so the server can't tie overhearing to its own speaking. A late mic packet is dropped, never a reason to reconnect: a reconnect loses the talk.
+- **Updates over the air.** Two app slots (`partitions.csv`): a new build goes into the one not running and boots on trial, kept once it talks with the server (`hal::firmware_good`), else rolled back by the bootloader. A build is told apart by the start of its ELF's hash, so the same code built again is the same build: change something to release. The panel's DMA reads PSRAM, which can't be read while flash is written: flash writes and the panel's strips take turns (`flash_writing`, `board_amoled_2_16.cpp`), or the display's SPI transfer fails and esp_lcd hangs on the next.
 - **The power button** can't be held for long gestures: its chip reports a press and a 2 s hold, and cuts the power at 4 to 10 s. That's why the menus use "+" and "–".
 - **Heritage.** Cubey grew out of two earlier projects by the same author, Puce and Lapsa. Code comments mention them ("Puce's owl's") as the origin of some code; neither is needed to build or run Cubey.

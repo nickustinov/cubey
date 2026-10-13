@@ -4,6 +4,8 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { admin } from "./admin";
+import { Firmware } from "./firmware";
+import { firmwareImage } from "./fixtures";
 import { Fleet } from "./fleet";
 import { Models } from "./models";
 import { Spending } from "./spending";
@@ -22,12 +24,22 @@ function setUp(password = "kubiks", keys: Record<string, string> = { GEMINI_API_
   fleet.log("44bd8d60da70").add({ heard: "Kāpēc debesis ir zilas?", said: "Saules gaisma…", forParents: false }, now);
   fleet.log("44bd8d60da70").add({ heard: "No kurienes nāk bērni?", said: "Pajautā mammai!", forParents: true }, now);
   spending.add("44bd8d60da70", { what: "think", model: "gpt-6-sol", input: 1_000_000, output: 100_000 }, now);
-  const wiped: string[] = [], changed: string[] = [];
-  const handle = admin({ password, fleet, spending, models, wipe: (id) => wiped.push(id), changed: (id) => changed.push(id), now: () => now, wait: async () => {} });
+  const firmware = new Firmware(mkdtempSync(join(tmpdir(), "cubey-admin-firmware-")));
+  const wiped: string[] = [], changed: string[] = [], updated: string[] = [];
+  const handle = admin({
+    password, fleet, spending, models, firmware, wipe: (id) => wiped.push(id), changed: (id) => changed.push(id), update: (id) => updated.push(id),
+    now: () => now, wait: async () => {},
+  });
   const get = (path: string, cookie = "") => handle(new Request(`https://cubey.fly.dev${path}`, { headers: { cookie } }));
   const post = (path: string, form: Record<string, string>, cookie = "") =>
     handle(new Request(`https://cubey.fly.dev${path}`, { method: "POST", headers: { cookie }, body: new URLSearchParams(form) }));
-  return { db, fleet, spending, models, wiped, changed, get, post };
+  // A file, as the page's upload form sends it.
+  const upload = (path: string, bin: Uint8Array, cookie = "") => {
+    const form = new FormData();
+    form.append("firmware", new Blob([bin]), "cubey.bin");
+    return handle(new Request(`https://cubey.fly.dev${path}`, { method: "POST", headers: { cookie }, body: form }));
+  };
+  return { db, fleet, spending, models, firmware, wiped, changed, updated, get, post, upload };
 }
 
 const cookieOf = (res: Response) => (res.headers.get("set-cookie") ?? "").split(";")[0];
@@ -141,4 +153,46 @@ test("a chosen model whose key is gone: the page says which one talks instead", 
   new Models(db, { GEMINI_API_KEY: "g", OPENAI_API_KEY: "o" }).choose("talk", "gpt-6-sol"); // chosen while the key was there
   const cookie = cookieOf((await post("/admin/login", { password: "kubiks" }))!);
   expect(await (await get("/admin", cookie))!.text()).toContain("GPT-6 Sol needs OPENAI_API_KEY: Gemini 3.5 Flash-Lite instead");
+});
+
+test("firmware: a build uploaded on the page is kept; each Cubey's own shows; an update asked for one, or all not running it", async () => {
+  const { get, post, upload, fleet, updated } = setUp();
+  const cookie = cookieOf((await post("/admin/login", { password: "kubiks" }))!);
+  let html = await (await get("/admin", cookie))!.text();
+  expect(html).toContain("None uploaded yet");
+  expect(html).toContain('enctype="multipart/form-data"');
+  expect(html).not.toContain("Update all");
+  expect((await upload("/admin/firmware", new Uint8Array(100), cookie))?.status).toBe(400); // not Cubey's firmware
+  expect((await upload("/admin/firmware", firmwareImage("b2c3d4e", "fedcba98765432100011"), cookie))?.status).toBe(303);
+  expect((await upload("/admin/firmware", firmwareImage("x"), ""))?.status).toBe(303); // no cookie: to the login, nothing kept
+  fleet.admit("ffeeddccbbaa", "k2", now);
+  fleet.ran("44bd8d60da70", { version: "a1b92ab", build: "0123456789abcdef" });
+  fleet.ran("ffeeddccbbaa", { version: "b2c3d4e", build: "fedcba9876543210" }); // runs it already
+  html = await (await get("/admin", cookie))!.text();
+  expect(html).toContain("b2c3d4e, built Oct 13 2026 13:30:00");
+  expect(html).toContain("Update all");
+  expect(html).toContain("firmware a1b92ab");
+
+  expect((await post("/admin/d/44bd8d60da70/update", {}, cookie))?.status).toBe(303);
+  expect(fleet.get("44bd8d60da70")?.wanted).toBe("fedcba9876543210");
+  expect(updated).toEqual(["44bd8d60da70"]); // offered at once, if it is on
+  expect(await (await get("/admin", cookie))!.text()).toContain("update to b2c3d4e waiting");
+  const detail = await (await get("/admin/d/44bd8d60da70", cookie))!.text();
+  expect(detail).toContain("Firmware");
+  expect(detail).toContain("Update to b2c3d4e");
+
+  updated.length = 0;
+  fleet.ran("44bd8d60da70", { version: "a1b92ab", build: "0123456789abcdef" }); // still on the one before: asked anew
+  expect((await post("/admin/update", {}, cookie))?.status).toBe(303);
+  expect(updated).toEqual(["44bd8d60da70"]); // not the one running it
+
+  fleet.ran("44bd8d60da70", { version: "a1b92ab", build: "0123456789abcdef", failed: "fedcba9876543210" }); // rolled back
+  const failed = await (await get("/admin/d/44bd8d60da70", cookie))!.text();
+  expect(failed).toContain("failed there");
+  expect(failed).not.toContain("Update to b2c3d4e"); // it would fail again: a new build, rather
+  expect(await (await get("/admin", cookie))!.text()).not.toContain("Update all");
+  updated.length = 0;
+  await post("/admin/update", {}, cookie);
+  await post("/admin/d/44bd8d60da70/update", {}, cookie);
+  expect(updated).toEqual([]);
 });

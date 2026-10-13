@@ -52,5 +52,10 @@ bool wifi_networks(std::vector<Network> &networks) {
 void wifi_join(const std::string &ssid, const std::string &password) { fake::hal.joined.emplace_back(ssid, password); }
 Keys keys() { return {}; }
 void screen(bool) {}
+Firmware firmware() { return fake::hal.firmware; }
+void firmware_good() {}
+void update(const std::string &) {}
+UpdateProgress update_progress() { return {}; }
+void restart() {}
 
 } // namespace cubey::hal

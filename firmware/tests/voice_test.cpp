@@ -50,6 +50,20 @@ TEST_CASE("says hello with the speaker rate once connected, and again on every n
     CHECK(fake::hal.sent == std::vector<std::string>{kHello, kHello});
 }
 
+TEST_CASE("its hello says its firmware, for updates: its version, its build, and an update it rolled back from") {
+    fake::reset();
+    fake::hal.firmware = {"a1b92ab", "0123456789abcdef", "1111111111111111"};
+    Voice voice;
+    voice.tick(0);
+    CHECK(fake::hal.sent == std::vector<std::string>{
+        R"({"type":"hello","speaker_rate":24000,"version":"a1b92ab","build":"0123456789abcdef","failed":"1111111111111111"})"});
+    fake::reset();
+    fake::hal.firmware = {"a1b92ab", "0123456789abcdef", ""};
+    Voice kept;
+    kept.tick(0);
+    CHECK(fake::hal.sent == std::vector<std::string>{R"({"type":"hello","speaker_rate":24000,"version":"a1b92ab","build":"0123456789abcdef"})"});
+}
+
 TEST_CASE("opening: the server is told, Cubey's hello plays, then the device listens") {
     fake::reset();
     Voice voice;

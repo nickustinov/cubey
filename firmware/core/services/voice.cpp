@@ -91,8 +91,12 @@ void Voice::tick(uint32_t now, const std::function<void(const ServerMessage &, c
     if (greeted_ != hal::link_session()) {
         if (open_) end(TalkEnd::Lost); // a new connection: the server has forgotten the talk
         char hello[64];
-        snprintf(hello, sizeof hello, R"({"type":"hello","speaker_rate":%d})", hal::speaker_rate());
-        hal::link_send(hello);
+        snprintf(hello, sizeof hello, R"({"type":"hello","speaker_rate":%d)", hal::speaker_rate());
+        const Firmware firmware = hal::firmware(); // for updates (none: a platform without them)
+        std::string said = hello;
+        if (!firmware.build.empty()) said += R"(,"version":")" + firmware.version + R"(","build":")" + firmware.build + '"';
+        if (!firmware.failed.empty()) said += R"(,"failed":")" + firmware.failed + '"';
+        hal::link_send(said + "}");
         greeted_ = hal::link_session();
     }
 
