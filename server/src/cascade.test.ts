@@ -40,7 +40,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   const played: Buffer[] = []; // what the device was sent of Cubey's voice
   let heardNext = "Kāpēc debesis ir zilas?";
   const learned: object[] = [];
-  const brightened: number[] = [], turned: number[] = [];
+  const brightened: number[] = [], turned: number[] = [], coloured: string[] = [];
   const logged: string[] = [];
   const deps: CascadeDeps = {
     history: { recent: () => before },
@@ -88,6 +88,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     learn: (what) => (learned.push(what), (now = { ...now, ...(what.name && { name: what.name }), ...(what.gender && { gender: what.gender }), ...(what.learns && { learns: what.learns }) })),
     brighten: (percent) => (brightened.push(percent), (now = { ...now, brightness: percent })),
     turn: (percent) => (turned.push(percent), (now = { ...now, volume: percent })),
+    colour: (theme) => (coloured.push(theme), (now = { ...now, theme: theme as Child["theme"] })),
   });
   await Bun.sleep(5);
   // She says something: the device listens and streams the mic, Soniox hears her pause.
@@ -100,7 +101,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     await Bun.sleep(5);
   };
   const types = () => texts.map((t) => t.type);
-  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, turned, logged, played };
+  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, turned, coloured, logged, played };
 }
 
 test("Cubey's hello: the model is told what happened, in Cubey's prompt with its battery, and its words are spoken as written", async () => {
@@ -188,6 +189,10 @@ test("its routines: the battery, brushing and its end, a timer, shown on the dev
   expect(t.brightened).toEqual([30]); // kept, and to the device with its settings (session.ts)
   await t.ask("Runā skaļāk!", json("Labi!", { routine: "volume", number: 80 }));
   expect(t.turned).toEqual([80]);
+  await t.ask("Esi sarkans!", json("Lūdzu!", { routine: "theme", theme: "red" }));
+  expect(t.coloured).toEqual(["red"]);
+  expect(t.types().at(-2)).toBe("heard"); // with its settings, not a message of its own
+  expect(t.asked.at(-1)!.system).not.toContain("Your colours are red"); // asked before: the next turn knows
   expect(t.types().at(-2)).toBe("heard");
   expect(t.types().at(-2)).toBe("heard");
   await t.ask("Atver valodu izvēlni", json("Lūdzu!", { routine: "menu" }));

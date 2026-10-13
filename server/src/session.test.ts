@@ -31,6 +31,7 @@ function session(talkOver?: boolean) {
       get: () => settings, set: (to) => to.language !== "xx" && (Object.assign(settings, to, { new: false }), true),
       brighten: (percent) => void (settings.brightness = percent),
       turn: (percent) => void (settings.volume = percent),
+      colour: (theme) => void (settings.theme = theme),
     },
     cubey: { open: (_, o, to) => (opened.push({ opened: o, rate: to.rate }), (out = to), talk) },
     send: { text: (msg) => void sent.push(msg), audio: () => {} },
@@ -69,6 +70,15 @@ test("to its hello the device hears its languages for its menu; the menu's chang
   expect(t.settings).toMatchObject({ language: "en", new: false });
   t.s.onText(JSON.stringify({ type: "settings", language: "en", theme: "white", brightness: 40 })); // its theme and brightness, from its menu
   expect(t.settings).toMatchObject({ theme: "white", brightness: 40 });
+});
+
+test("asked for another colour: kept, and to the device with its settings, the talk going on", () => {
+  const t = session();
+  t.s.onText(JSON.stringify({ type: "open" }));
+  t.out().colour("red");
+  expect(t.settings.theme).toBe("red");
+  expect(t.sent.at(-1)).toMatchObject({ type: "settings", theme: "red" });
+  expect(t.did).toEqual([]);
 });
 
 test("asked to be louder or quieter: kept, and to the device with its settings, the talk going on; set on its menu, kept", () => {

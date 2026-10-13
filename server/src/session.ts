@@ -87,8 +87,8 @@ export type Settings = { language: string; theme?: string };
 export type Known = Settings & { new: boolean; brightness: number; volume: number; theme: string };
 export type SessionDeps = {
   child: () => Child;
-  // what the device's menu sets, and the brightness and volume asked of Cubey (memory.ts)
-  settings: { get(): Known; set(settings: Settings): boolean; brighten(percent: number): void; turn(percent: number): void };
+  // what the device's menu sets, and the brightness, volume and theme asked of Cubey (memory.ts)
+  settings: { get(): Known; set(settings: Settings): boolean; brighten(percent: number): void; turn(percent: number): void; colour(theme: string): void };
   cubey: Talks; // through Soniox and a model, or on Gemini Live (server.ts)
   send: { text(msg: object): void; audio(pcm: Buffer): void };
   onExchange?: (exchanged: Exchanged) => void; // for the parents' log and the history
@@ -183,6 +183,7 @@ export class Session {
       learn: (learned) => this.deps.learn?.(learned) ?? this.deps.child(),
       brighten: (percent) => (this.deps.settings.brighten(percent), this.sendSettings(), this.deps.child()),
       turn: (percent) => (this.deps.settings.turn(percent), this.sendSettings(), this.deps.child()),
+      colour: (theme) => (this.deps.settings.colour(theme), this.sendSettings(), this.deps.child()),
     };
     this.talk = this.deps.cubey.open(this.deps.child(), opened, out);
   }

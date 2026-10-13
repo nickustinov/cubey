@@ -64,6 +64,14 @@ test("the language the child wants to learn, as they tell Cubey: kept, changed w
   expect(new Memory(path, "Anna").child(today).learns).toBe("es"); // in memory.md
 });
 
+test("its theme, asked for by voice: one of its themes; anything else, as it was", () => {
+  const memory = new Memory(file(), "Anna");
+  expect(memory.colour("red")).toBe(true);
+  expect(new Memory(memory["path"], "Anna").child(today).theme).toBe("red");
+  expect(memory.colour("pink")).toBe(false);
+  expect(memory.child(today).theme).toBe("red");
+});
+
 test("its volume, asked for by voice, or set on its menu or the admin page: 10 to 100 percent; none, full", () => {
   const memory = new Memory(file(), "Anna");
   expect(memory.child(today).volume).toBeUndefined();

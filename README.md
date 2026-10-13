@@ -73,6 +73,7 @@ Saying something unrelated while a game with letters, dots or spelling is on end
 | --- | --- |
 | "Make your screen brighter", "Dimmer", "Set the brightness to 40%" | The screen's brightness changes (10–100%) |
 | "Louder", "Quieter", "Set the volume to 50%" | Cubey's volume changes (10–100%), heard as it answers |
+| "Turn red", "Be orange", "Make your colour white" | Cubey's colours change: amber (orange), green, red, blue, turquoise (VFD) or white |
 | "Open your menu", "Change your language", "Change your colours" | The grown-ups' menu opens on the screen |
 | "Set up your Wi-Fi" | The Wi-Fi setup opens on the screen |
 

@@ -163,6 +163,16 @@ test("for grown-ups, by voice: the screen's brightness (10 to 100%), its menu (l
   expect(prompt).toContain("Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume.");
 });
 
+test("by voice, its colours: one of its themes, as a child names them (orange is amber, turquoise the VFD's)", () => {
+  const prompt = cubeyPrompt({ ...anna, theme: "green" }, { earlier: "", now: evening, mode: "cascade" });
+  expect(prompt).toContain("Your colours are green.");
+  expect(prompt).toContain('set routine to "theme" with theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white)');
+  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).toContain("Your colours are amber.");
+  expect(prompt).toContain('"theme": ""');
+  expect(readAnswer(JSON.stringify({ say: "Sarkans!", routine: "theme", theme: "red" }))).toMatchObject({ routine: "theme", theme: "red" });
+  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "theme", theme: "pink" }))?.theme).toBeUndefined(); // none such
+});
+
 test("by voice, its volume (10 to 100%), as its brightness", () => {
   const prompt = cubeyPrompt({ ...anna, volume: 70 }, { earlier: "", now: evening, mode: "cascade" });
   expect(prompt).toContain("Your volume is 70%. When asked to be louder or quieter, or a percent, in any words,");

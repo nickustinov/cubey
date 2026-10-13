@@ -109,6 +109,7 @@ Bun.serve<Data>({
           set: (settings) => memory.set(settings),
           brighten: (percent) => void memory.brighten(percent),
           turn: (percent) => void memory.turn(percent),
+          colour: (theme) => void memory.colour(theme),
         },
         learn: (learned) => memory.learn(learned),
         spent: (spent) => spending.add(device, spent),

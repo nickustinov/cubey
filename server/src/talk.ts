@@ -16,7 +16,7 @@ export type Opened = { again?: boolean; note?: string; once?: boolean };
 // learn: what the child told Cubey (their name, girl or boy, their age), kept in its Cubey's memory: the child, now.
 export type TalkOut = {
   rate: number; text(msg: object): void; audio(pcm: Buffer): void; exchange(exchanged: Exchanged): void; battery(): Battery | undefined;
-  spent(spent: Spent): void; learn(learned: Learned): Child; brighten(percent: number): Child; turn(percent: number): Child; // turn: its volume
+  spent(spent: Spent): void; learn(learned: Learned): Child; brighten(percent: number): Child; turn(percent: number): Child; colour(theme: string): Child; // turn: its volume; colour: its theme
 };
 export type Talk = {
   listen(): void;
@@ -61,7 +61,8 @@ export function routineMessage(routine: Routine, args: { minutes?: unknown; for?
     case "count": return args.number ? { type: "count", n: args.number } : undefined;
     case "spell": return undefined; // its word as it is written, before its speech (cascade.ts)
     case "brightness":
-    case "volume": return undefined; // with its settings (session.ts)
+    case "volume":
+    case "theme": return undefined; // with its settings (session.ts)
     case "menu": return { type: "menu" };
     case "wifi": return { type: "wifi" };
   }

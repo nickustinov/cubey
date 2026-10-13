@@ -2,7 +2,7 @@
 // their talks before (history.ts). Two ways it hears and speaks: through Soniox, its answers written by a model as
 // JSON (cascade.ts: its goodbye, the questions for the parents and its routines are fields it sets), or on Gemini Live
 // (live.ts: they are calls of tools).
-import { ageOf, type Child, LANGUAGE_NAMES, momentFor, nameOf, parentsOf, pronouns, speakFor } from "./child";
+import { ageOf, type Child, LANGUAGE_NAMES, momentFor, nameOf, parentsOf, pronouns, speakFor, type Theme, THEMES } from "./child";
 import type { Learned } from "./memory";
 
 export type Mode = "cascade" | "live";
@@ -106,6 +106,7 @@ Timers
 
 ${live ? "" : `For grown-ups
 - Your screen's brightness is ${child.brightness ?? 100}%. When asked to make it brighter or dimmer, or a percent, in any words, ${routine("brightness")} with number to the new percent (10 to 100), and say so in a few words.
+- Your colours are ${child.theme ?? "amber"}. When asked for another colour, in any words, ${routine("theme")} with theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white); say so in a few words. Any other colour: say kindly you have these.
 - Your volume is ${child.volume ?? 100}%. When asked to be louder or quieter, or a percent, in any words, ${routine("volume")} with number to the new percent (10 to 100), and say so in a few words.
 - Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume. When asked for it, your settings or any of these, or for your Wi-Fi, in any words, ${routine("menu")} or ${routine("wifi")}, and say in a few words that it opens on your screen: you don't listen until it is closed.
 
@@ -175,14 +176,14 @@ Answer with JSON only: ${opts.playing === "chain"
     ? fresh || !needed
       ? `{"hers": "<her word as she meant it, or \"\">", "word": "<your word, or \"\">", "spelled": "<your word, letter by letter>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
       : `{"word": "", "hint": "<the word your hint is for>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
-    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "child": {}, "learn": ""}`}`}`;
+    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "theme": "", "child": {}, "learn": ""}`}`}`;
 }
 
 // Its answer, as the model wrote it (cascade.ts): its words, a goodbye, a question for her parents, a routine with
 // what it needs; or the words already spoken if the rest is unusable; nothing without either.
-export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "volume", "menu", "wifi"] as const;
+export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "volume", "theme", "menu", "wifi"] as const;
 export type Routine = (typeof ROUTINES)[number];
-export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
+export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; theme?: Theme; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
 
 // A game's letter, small, one: the first of what the model wrote, if it is a letter.
 const letterOf = (written: unknown) => {
@@ -270,6 +271,7 @@ export function readAnswer(raw: string, spoken = ""): Answer | undefined {
         ...(json.routine === "letters" && letterOf(json.letter) ? { letter: letterOf(json.letter) } : {}),
         ...(json.routine === "count" && dotsOf(json.number) ? { number: dotsOf(json.number) } : {}),
         ...((json.routine === "brightness" || json.routine === "volume") && Number.isFinite(json.number) ? { number: Math.min(100, Math.max(10, Math.round(json.number))) } : {}),
+        ...(json.routine === "theme" && THEMES.includes(json.theme) ? { theme: json.theme as Theme } : {}),
         ...(chained ? { letter: chained, word } : {}),
         ...(hers ? { hers } : {}),
       };

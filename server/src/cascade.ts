@@ -380,6 +380,7 @@ class CascadeTalk implements Talk {
       if (learns) this.startLesson(learns);
       if (routine === "brightness" && answer.number) this.child = this.out.brighten(answer.number);
       if (routine === "volume" && answer.number) this.child = this.out.turn(answer.number);
+      if (routine === "theme" && answer.theme) this.child = this.out.colour(answer.theme);
       if (!spoken.trim()) said = said.then(() => voice.say(answer.said)); // none of it came as it was written
       await said;
       await voice.end();

@@ -119,6 +119,13 @@ export class Memory {
     return true;
   }
 
+  // Asked for by voice: false, and nothing changed, for a theme there is none of.
+  colour(theme: string): boolean {
+    if (!(THEMES as readonly string[]).includes(theme)) return false;
+    this.write({ ...this.read(), theme: theme as Theme });
+    return true;
+  }
+
   // Asked for by voice, or slid on its menu: false, and nothing changed, for a volume it can't have.
   turn(percent: number): boolean {
     if (!percentOf(percent)) return false;
