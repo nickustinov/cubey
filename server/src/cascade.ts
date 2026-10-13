@@ -378,9 +378,10 @@ class CascadeTalk implements Talk {
       const message = routine && (routine !== "lesson" || learns) && routineMessage(routine, { ...answer, letter, number: dots }, battery);
       if (message && !(routine === "chain" && shown)) this.out.text(message);
       if (learns) this.startLesson(learns);
-      if (routine === "brightness" && answer.number) this.child = this.out.brighten(answer.number);
-      if (routine === "volume" && answer.number) this.child = this.out.turn(answer.number);
-      if (routine === "theme" && answer.theme) this.child = this.out.colour(answer.theme);
+      // Its settings, as asked, if they change: kept, and to the device with them (session.ts).
+      if (answer.brightness && answer.brightness !== (this.child.brightness ?? 100)) this.child = this.out.brighten(answer.brightness);
+      if (answer.volume && answer.volume !== (this.child.volume ?? 100)) this.child = this.out.turn(answer.volume);
+      if (answer.theme && answer.theme !== (this.child.theme ?? "amber")) this.child = this.out.colour(answer.theme);
       if (!spoken.trim()) said = said.then(() => voice.say(answer.said)); // none of it came as it was written
       await said;
       await voice.end();

@@ -185,14 +185,15 @@ test("its routines: the battery, brushing and its end, a timer, shown on the dev
   expect(t.texts.at(-2)).toEqual({ type: "dice" });
   await t.ask("Spēlēsim meklēt!", json("Atrodi kaut ko sarkanu!", { routine: "find" }));
   expect(t.texts.at(-2)).toEqual({ type: "find" });
-  await t.ask("Padari ekrānu tumšāku", json("Labi.", { routine: "brightness", number: 30 }));
+  await t.ask("Padari ekrānu tumšāku", json("Labi.", { brightness: 30 }));
   expect(t.brightened).toEqual([30]); // kept, and to the device with its settings (session.ts)
-  await t.ask("Runā skaļāk!", json("Labi!", { routine: "volume", number: 80 }));
+  await t.ask("Runā skaļāk!", json("Labi!", { volume: 80 }));
   expect(t.turned).toEqual([80]);
-  await t.ask("Esi sarkans!", json("Lūdzu!", { routine: "theme", theme: "red" }));
-  expect(t.coloured).toEqual(["red"]);
+  await t.ask("Vai tu vari palikt zilā krāsā?", JSON.stringify({ theme: "blue", say: "Tagad esmu zils!" })); // no routine: as Flash-Lite wrote it
+  expect(t.coloured).toEqual(["blue"]);
   expect(t.types().at(-2)).toBe("heard"); // with its settings, not a message of its own
-  expect(t.asked.at(-1)!.system).not.toContain("Your colours are red"); // asked before: the next turn knows
+  await t.ask("Labi!", json("Jā!", { theme: "blue", brightness: 30, volume: 80 })); // as they are: nothing changes
+  expect([t.coloured, t.brightened, t.turned]).toEqual([["blue"], [30], [80]]);
   expect(t.types().at(-2)).toBe("heard");
   expect(t.types().at(-2)).toBe("heard");
   await t.ask("Atver valodu izvēlni", json("Lūdzu!", { routine: "menu" }));

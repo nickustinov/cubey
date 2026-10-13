@@ -105,9 +105,9 @@ Timers
 - When ${she} or a grown-up asks for a timer, in any words, ${live ? "call timer with the minutes and what it is for" : `${routine("timer")}, minutes to how long (1 to 180) and for to what it is for: ${TIMER_FOR.map((k) => `"${k}"`).join(", ")}`} (cartoons, tidying up, a bath, eating, going to sleep, reading, playing, or something else); if they didn't say how long, ask first. Then say in a sentence that it is on and that you'll tell ${them} when it is time: you rest until then, and you'll hear how it goes in brackets.
 
 ${live ? "" : `For grown-ups
-- Your screen's brightness is ${child.brightness ?? 100}%. When asked to make it brighter or dimmer, or a percent, in any words, ${routine("brightness")} with number to the new percent (10 to 100), and say so in a few words.
-- Your colours are ${child.theme ?? "amber"}. When asked for another colour, in any words, ${routine("theme")} with theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white); say so in a few words. Any other colour: say kindly you have these.
-- Your volume is ${child.volume ?? 100}%. When asked to be louder or quieter, or a percent, in any words, ${routine("volume")} with number to the new percent (10 to 100), and say so in a few words.
+- Your screen's brightness is ${child.brightness ?? 100}%. When asked to make it brighter or dimmer, or a percent, in any words, set brightness to the new percent (10 to 100), and say so in a few words.
+- Your colours are ${child.theme ?? "amber"}. When asked for another colour, in any words, set theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white); say so in a few words. Any other colour: say kindly you have these.
+- Your volume is ${child.volume ?? 100}%. When asked to be louder or quieter, or a percent, in any words, set volume to the new percent (10 to 100), and say so in a few words.
 - Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume. When asked for it, your settings or any of these, or for your Wi-Fi, in any words, ${routine("menu")} or ${routine("wifi")}, and say in a few words that it opens on your screen: you don't listen until it is closed.
 
 Dice
@@ -176,14 +176,14 @@ Answer with JSON only: ${opts.playing === "chain"
     ? fresh || !needed
       ? `{"hers": "<her word as she meant it, or \"\">", "word": "<your word, or \"\">", "spelled": "<your word, letter by letter>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
       : `{"word": "", "hint": "<the word your hint is for>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
-    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "theme": "", "child": {}, "learn": ""}`}`}`;
+    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "theme": "", "brightness": 0, "volume": 0, "child": {}, "learn": ""}`}`}`;
 }
 
 // Its answer, as the model wrote it (cascade.ts): its words, a goodbye, a question for her parents, a routine with
 // what it needs; or the words already spoken if the rest is unusable; nothing without either.
-export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "volume", "theme", "menu", "wifi"] as const;
+export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "menu", "wifi"] as const;
 export type Routine = (typeof ROUTINES)[number];
-export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; theme?: Theme; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
+export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; theme?: Theme; brightness?: number; volume?: number; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
 
 // A game's letter, small, one: the first of what the model wrote, if it is a letter.
 const letterOf = (written: unknown) => {
@@ -203,6 +203,12 @@ function learnedOf(written: unknown): Learned | undefined {
   };
   return Object.keys(learned).length ? learned : undefined;
 }
+
+// A brightness or a volume, as the model wrote it: 10 to 100 percent; none for 0, or anything not a number.
+const percentOf = (written: unknown) => {
+  const n = Number(written);
+  return typeof written === "number" && n ? Math.min(100, Math.max(10, Math.round(n))) : undefined;
+};
 
 // The language the child wants to learn, as the model wrote it: a code ("fr"); none for anything else.
 const learnsOf = (written: unknown) => {
@@ -258,6 +264,11 @@ export function readAnswer(raw: string, spoken = ""): Answer | undefined {
       const answer: Answer = {
         said: json.say.trim(), bye: json.bye === true, forParents: json.for_parents === true, ...(textOf(json.show) ? { show: textOf(json.show) } : {}),
         ...(learned && { learned }),
+        // Its settings, fields as show is, not routines: with the talk's short answers before it, Flash-Lite wrote
+        // {"theme": "blue"} and {"volume": 100} and no routine (2026-10-13).
+        ...(THEMES.includes(json.theme) && { theme: json.theme as Theme }),
+        ...(percentOf(json.brightness) && { brightness: percentOf(json.brightness) }),
+        ...(percentOf(json.volume) && { volume: percentOf(json.volume) }),
       };
       if (!ROUTINES.includes(json.routine)) return answer;
       // The chain: its word (its first, spelled), to scroll in on the device before the letter she needs from it; hers,
@@ -270,8 +281,6 @@ export function readAnswer(raw: string, spoken = ""): Answer | undefined {
         ...(json.routine === "timer" ? { minutes: Number(json.minutes), for: TIMER_FOR.includes(json.for) ? json.for : "other" } : {}),
         ...(json.routine === "letters" && letterOf(json.letter) ? { letter: letterOf(json.letter) } : {}),
         ...(json.routine === "count" && dotsOf(json.number) ? { number: dotsOf(json.number) } : {}),
-        ...((json.routine === "brightness" || json.routine === "volume") && Number.isFinite(json.number) ? { number: Math.min(100, Math.max(10, Math.round(json.number))) } : {}),
-        ...(json.routine === "theme" && THEMES.includes(json.theme) ? { theme: json.theme as Theme } : {}),
         ...(chained ? { letter: chained, word } : {}),
         ...(hers ? { hers } : {}),
       };

@@ -151,14 +151,16 @@ test("the dice: a word or two as it rolls, each number said gladly with no quest
 test("for grown-ups, by voice: the screen's brightness (10 to 100%), its menu (languages, theme, brightness), the Wi-Fi setup", () => {
   const prompt = cubeyPrompt({ ...anna, brightness: 40 }, { earlier: "", now: evening, mode: "cascade" });
   expect(prompt).toContain("Your screen's brightness is 40%");
-  expect(prompt).toContain('set routine to "brightness"');
+  expect(prompt).toContain("set brightness to the new percent (10 to 100)");
   expect(prompt).toContain('set routine to "menu"');
   expect(prompt).toContain('set routine to "wifi"');
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).toContain("Your screen's brightness is 100%");
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness", number: 60 }))).toMatchObject({ routine: "brightness", number: 60 });
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness", number: 0 }))?.number).toBe(10); // as dim as it goes
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness", number: 250 }))?.number).toBe(100);
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness" }))?.number).toBeUndefined();
+  // Fields, as show is, not routines: with the talk's short answers before it, Flash-Lite wrote {"theme": "blue"} and
+  // {"volume": 100}, and no routine (2026-10-13).
+  expect(readAnswer(JSON.stringify({ say: "Labi!", brightness: 60 }))?.brightness).toBe(60);
+  expect(readAnswer(JSON.stringify({ say: "Labi!", brightness: 5 }))?.brightness).toBe(10); // as dim as it goes
+  expect(readAnswer(JSON.stringify({ say: "Labi!", brightness: 250 }))?.brightness).toBe(100);
+  expect(readAnswer(JSON.stringify({ say: "Labi!", brightness: 0 }))?.brightness).toBeUndefined(); // none asked
   expect(readAnswer(JSON.stringify({ say: "Lūdzu!", routine: "menu" }))?.routine).toBe("menu");
   expect(prompt).toContain("Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume.");
 });
@@ -166,21 +168,22 @@ test("for grown-ups, by voice: the screen's brightness (10 to 100%), its menu (l
 test("by voice, its colours: one of its themes, as a child names them (orange is amber, turquoise the VFD's)", () => {
   const prompt = cubeyPrompt({ ...anna, theme: "green" }, { earlier: "", now: evening, mode: "cascade" });
   expect(prompt).toContain("Your colours are green.");
-  expect(prompt).toContain('set routine to "theme" with theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white)');
+  expect(prompt).toContain("set theme to one of: amber (orange, yellow), green, red, blue, vfd (turquoise, mint), white (dark dots on white)");
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).toContain("Your colours are amber.");
   expect(prompt).toContain('"theme": ""');
-  expect(readAnswer(JSON.stringify({ say: "Sarkans!", routine: "theme", theme: "red" }))).toMatchObject({ routine: "theme", theme: "red" });
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "theme", theme: "pink" }))?.theme).toBeUndefined(); // none such
+  expect(readAnswer(JSON.stringify({ theme: "blue", say: "Tagad esmu zils!" }))?.theme).toBe("blue"); // as Flash-Lite wrote it
+  expect(readAnswer(JSON.stringify({ say: "Labi!", theme: "pink" }))?.theme).toBeUndefined(); // none such
 });
 
 test("by voice, its volume (10 to 100%), as its brightness", () => {
   const prompt = cubeyPrompt({ ...anna, volume: 70 }, { earlier: "", now: evening, mode: "cascade" });
   expect(prompt).toContain("Your volume is 70%. When asked to be louder or quieter, or a percent, in any words,");
-  expect(prompt).toContain('set routine to "volume" with number to the new percent (10 to 100)');
+  expect(prompt).toContain("set volume to the new percent (10 to 100)");
+  expect(prompt).toContain('"brightness": 0, "volume": 0');
   expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).toContain("Your volume is 100%");
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 40 }))).toMatchObject({ routine: "volume", number: 40 });
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 2 }))?.number).toBe(10); // as quiet as it goes
-  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 300 }))?.number).toBe(100);
+  expect(readAnswer(JSON.stringify({ volume: 40, say: "Labi!" }))?.volume).toBe(40);
+  expect(readAnswer(JSON.stringify({ say: "Labi!", volume: 2 }))?.volume).toBe(10); // as quiet as it goes
+  expect(readAnswer(JSON.stringify({ say: "Labi!", volume: 300 }))?.volume).toBe(100);
   expect(readAnswer(JSON.stringify({ say: "Lūdzu!", routine: "wifi" }))?.routine).toBe("wifi");
 });
 
