@@ -1,0 +1,39 @@
+# The Cubey server on Fly.io: one machine in Frankfurt, always on (Cubey keeps its WebSocket open), SQLite and the
+# parents' log on a volume.
+#   fly deploy                      (from the repo root)
+#   fly secrets set NAME=value      (OPENAI_API_KEY, SONIOX_API_KEY, GEMINI_API_KEY, CUBEY_DEVICE_TOKEN,
+#                                    CUBEY_ADMIN_PASSWORD: as in server/.env)
+# Deploying your own: set app to a name of your own (README.md, Deploying the server).
+app = "cubey"
+primary_region = "fra"
+
+[build]
+  dockerfile = "server/Dockerfile"
+
+[env]
+  HOST = "0.0.0.0"
+  CUBEY_MODEL = "gemini-3.5-flash-lite" # quicker than GPT-6 Sol on the board (2026-10-12)
+  PORT = "8788"
+  CUBEY_DATA = "/data"
+
+[http_service]
+  internal_port = 8788
+  force_https = true
+  auto_stop_machines = "off" # Cubey keeps a WebSocket open
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[mounts]
+  source = "cubey_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

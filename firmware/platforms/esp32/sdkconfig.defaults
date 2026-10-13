@@ -1,0 +1,80 @@
+CONFIG_IDF_TARGET="esp32s3"
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_FREERTOS_HZ=1000
+
+# LVGL, matching the simulator (platforms/mac/lv_conf.h).
+CONFIG_LV_COLOR_DEPTH_16=y
+CONFIG_LV_DEF_REFR_PERIOD=15
+# LVGL draws on both cores (as Waveshare's demo); the core still runs on the LVGL task alone.
+CONFIG_LV_OS_FREERTOS=y
+CONFIG_LV_DRAW_SW_DRAW_UNIT_CNT=2
+CONFIG_LV_USE_CLIB_MALLOC=y
+CONFIG_LV_USE_CLIB_STRING=y
+CONFIG_LV_USE_CLIB_SPRINTF=y
+# Her word game's pictures come as PNG from the server; decoded ones are cached (1 MB: PSRAM also holds code, speech,
+# the frame buffer and TLS).
+CONFIG_LV_USE_LODEPNG=y
+CONFIG_LV_CACHE_DEF_SIZE=1048576
+CONFIG_LV_BUILD_EXAMPLES=n
+CONFIG_LV_BUILD_DEMOS=n
+
+# NVS and one app (partitions.csv).
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# As Waveshare's demos: code and read-only data from PSRAM, 64-byte data cache lines, code built for speed.
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+CONFIG_ESP32S3_DATA_CACHE_LINE_64B=y
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+# Full speed while the screen is on or the audio awake, 80 MHz when dark and quiet (main/power.cpp).
+CONFIG_PM_ENABLE=y
+# A mesh (main/network.cpp): the nodes may steer the cube (802.11k/v, MBO) and hand it over fast (802.11r);
+# Espressif's roaming app reconnects after a drop, skips a node that failed three times for five minutes, and below
+# -67 dBm (a far node at -75 stuttered) moves to a stronger one, without scanning every 30 s through a talk.
+CONFIG_ESP_WIFI_11KV_SUPPORT=y
+CONFIG_ESP_WIFI_MBO_SUPPORT=y
+CONFIG_ESP_WIFI_11R_SUPPORT=y
+CONFIG_ESP_WIFI_ENABLE_ROAMING_APP=y
+CONFIG_ESP_WIFI_ROAMING_LOW_RSSI_THRESHOLD=-67
+CONFIG_ESP_WIFI_ROAMING_PERIODIC_SCAN_MONITOR=n
+CONFIG_ESP_WIFI_ROAMING_BSSID_BLACKLIST=y
+CONFIG_ESP_WIFI_ROAMING_AUTO_BLACKLISTING=y
+# The Mac's server by its .local name.
+CONFIG_LWIP_DNS_SUPPORT_MDNS_QUERIES=y
+# Internal RAM is the display's, DMA's and Wi-Fi's: allocations of 1 KB and more, Wi-Fi's and lwIP's buffers
+# and TLS's go to PSRAM (Lapsa ran internal RAM down to 10 KB during a talk before this).
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=1024
+CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP=y
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+# ...and TLS decrypts in software: the hardware AES engine can't read PSRAM, so it copies every block into
+# internal RAM, and once that ran short Lapsa's link to Fly broke mid-speech ("esp-aes: Failed to allocate").
+CONFIG_MBEDTLS_HARDWARE_AES=n
+# Receiving a long answer must not hold up the microphone's uploads.
+CONFIG_ESP_WS_CLIENT_SEPARATE_TX_LOCK=y
+# The server link sends her voice while it receives Cubey's (talking over it): lwIP's default 5.7 KB
+# send buffer filled with any hiccup, a send waited, and the link dropped. Its buffers are in PSRAM.
+CONFIG_LWIP_TCP_SND_BUF_DEFAULT=32768
+CONFIG_LWIP_TCP_WND_DEFAULT=32768
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
+# Light sleep while Cubey is dark and quiet (main/power.cpp): the scheduler sleeps between its tasks' deadlines.
+CONFIG_FREERTOS_USE_TICKLESS_IDLE=y
+# ...but not while a computer is on the USB port: its serial (logs, flashing) doesn't work through light sleep.
+CONFIG_USJ_NO_AUTO_LS_ON_CONNECTION=y
+
+# esp-sr's voice detector (audio.cpp), flashed into the model partition
+CONFIG_SR_VADN_VADNET1_MEDIUM=y
+
+# Internal RAM for Wi-Fi's management frames and TLS: down to 2 KB free, Wi-Fi couldn't send an association request
+# ("m f assoc req": no memory) and never joined again, 2026-10-12. Its code out of IRAM, fewer fixed buffers (speech
+# needs far less than their throughput): about 35 KB back.
+CONFIG_ESP_WIFI_IRAM_OPT=n
+CONFIG_ESP_WIFI_RX_IRAM_OPT=n
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=10
+CONFIG_ESP_WIFI_STATIC_TX_BUFFER_NUM=10
+CONFIG_ESP_WIFI_RX_BA_WIN=10

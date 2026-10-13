@@ -1,0 +1,9 @@
+.DS_Store
+build/
+.env
+node_modules/
+server/data/
+firmware/platforms/esp32/sdkconfig
+firmware/platforms/esp32/sdkconfig.old
+firmware/platforms/esp32/sdkconfig.local
+firmware/platforms/esp32/managed_components/

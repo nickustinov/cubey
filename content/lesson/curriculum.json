@@ -1,0 +1,2263 @@
+{
+ "stages": [
+  {
+   "name": "First words",
+   "units": [
+    {
+     "id": "hello",
+     "name": "Hello and bye",
+     "activity": "talk",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "hello",
+       "en": "hello",
+       "picture": "Waving hand",
+       "type": "phrase"
+      },
+      {
+       "id": "bye",
+       "en": "bye-bye",
+       "picture": "Door",
+       "type": "phrase"
+      },
+      {
+       "id": "yes",
+       "en": "yes",
+       "picture": "Thumbs up",
+       "type": "phrase"
+      },
+      {
+       "id": "no",
+       "en": "no",
+       "picture": "Cross mark",
+       "type": "phrase"
+      },
+      {
+       "id": "thank_you",
+       "en": "thank you",
+       "picture": "Folded hands",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "pets",
+     "name": "Pets",
+     "activity": "touch",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "cat",
+       "en": "cat",
+       "picture": "Cat",
+       "type": "word"
+      },
+      {
+       "id": "dog",
+       "en": "dog",
+       "picture": "Dog",
+       "type": "word"
+      },
+      {
+       "id": "fish",
+       "en": "fish",
+       "picture": "Tropical fish",
+       "type": "word"
+      },
+      {
+       "id": "bird",
+       "en": "bird",
+       "picture": "Bird",
+       "type": "word"
+      },
+      {
+       "id": "rabbit",
+       "en": "rabbit",
+       "picture": "Rabbit",
+       "type": "word"
+      },
+      {
+       "id": "mouse",
+       "en": "mouse",
+       "picture": "Mouse",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "fruit",
+     "name": "Fruit",
+     "activity": "touch",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "apple",
+       "en": "apple",
+       "picture": "Red apple",
+       "type": "word"
+      },
+      {
+       "id": "banana",
+       "en": "banana",
+       "picture": "Banana",
+       "type": "word"
+      },
+      {
+       "id": "orange",
+       "en": "orange",
+       "picture": "Tangerine",
+       "type": "word"
+      },
+      {
+       "id": "strawberry",
+       "en": "strawberry",
+       "picture": "Strawberry",
+       "type": "word"
+      },
+      {
+       "id": "grapes",
+       "en": "grapes",
+       "picture": "Grapes",
+       "type": "word"
+      },
+      {
+       "id": "pear",
+       "en": "pear",
+       "picture": "Pear",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "toys",
+     "name": "Toys",
+     "activity": "touch",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "ball",
+       "en": "ball",
+       "picture": "Soccer ball",
+       "type": "word"
+      },
+      {
+       "id": "teddy",
+       "en": "teddy bear",
+       "picture": "Teddy bear",
+       "type": "word"
+      },
+      {
+       "id": "car",
+       "en": "car",
+       "picture": "Automobile",
+       "type": "word"
+      },
+      {
+       "id": "balloon",
+       "en": "balloon",
+       "picture": "Balloon",
+       "type": "word"
+      },
+      {
+       "id": "kite",
+       "en": "kite",
+       "picture": "Kite",
+       "type": "word"
+      },
+      {
+       "id": "drum",
+       "en": "drum",
+       "picture": "Drum",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "colours_1",
+     "name": "Red, blue, yellow, green",
+     "activity": "colour",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "red",
+       "en": "red",
+       "picture": "Red circle",
+       "type": "colour"
+      },
+      {
+       "id": "blue",
+       "en": "blue",
+       "picture": "Blue circle",
+       "type": "colour"
+      },
+      {
+       "id": "yellow",
+       "en": "yellow",
+       "picture": "Yellow circle",
+       "type": "colour"
+      },
+      {
+       "id": "green",
+       "en": "green",
+       "picture": "Green circle",
+       "type": "colour"
+      }
+     ]
+    },
+    {
+     "id": "numbers_1",
+     "name": "One, two, three",
+     "activity": "count",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "one",
+       "en": "one",
+       "picture": "Keycap 1",
+       "type": "number"
+      },
+      {
+       "id": "two",
+       "en": "two",
+       "picture": "Keycap 2",
+       "type": "number"
+      },
+      {
+       "id": "three",
+       "en": "three",
+       "picture": "Keycap 3",
+       "type": "number"
+      }
+     ]
+    },
+    {
+     "id": "face",
+     "name": "My face",
+     "activity": "act",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "eye",
+       "en": "eye",
+       "picture": "Eye",
+       "type": "word"
+      },
+      {
+       "id": "ear",
+       "en": "ear",
+       "picture": "Ear",
+       "type": "word"
+      },
+      {
+       "id": "nose",
+       "en": "nose",
+       "picture": "Nose",
+       "type": "word"
+      },
+      {
+       "id": "mouth",
+       "en": "mouth",
+       "picture": "Mouth",
+       "type": "word"
+      },
+      {
+       "id": "hand",
+       "en": "hand",
+       "picture": "Raised hand",
+       "type": "word"
+      },
+      {
+       "id": "foot",
+       "en": "foot",
+       "picture": "Foot",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "first_actions",
+     "name": "Clap and wave",
+     "activity": "act",
+     "from": 24,
+     "ideas": [
+      {
+       "id": "clap",
+       "en": "clap",
+       "picture": "Clapping hands",
+       "type": "action"
+      },
+      {
+       "id": "wave",
+       "en": "wave",
+       "picture": "Waving hand",
+       "type": "action"
+      },
+      {
+       "id": "sleep",
+       "en": "sleep",
+       "picture": "Sleeping face",
+       "type": "action"
+      },
+      {
+       "id": "eat",
+       "en": "eat",
+       "picture": "Fork and knife with plate",
+       "type": "action"
+      },
+      {
+       "id": "drink",
+       "en": "drink",
+       "picture": "Cup with straw",
+       "type": "action"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "My world",
+   "units": [
+    {
+     "id": "farm",
+     "name": "On the farm",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "cow",
+       "en": "cow",
+       "picture": "Cow",
+       "type": "word"
+      },
+      {
+       "id": "pig",
+       "en": "pig",
+       "picture": "Pig",
+       "type": "word"
+      },
+      {
+       "id": "horse",
+       "en": "horse",
+       "picture": "Horse",
+       "type": "word"
+      },
+      {
+       "id": "sheep",
+       "en": "sheep",
+       "picture": "Ewe",
+       "type": "word"
+      },
+      {
+       "id": "chicken",
+       "en": "chicken",
+       "picture": "Chicken",
+       "type": "word"
+      },
+      {
+       "id": "duck",
+       "en": "duck",
+       "picture": "Duck",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "food",
+     "name": "Food",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "bread",
+       "en": "bread",
+       "picture": "Bread",
+       "type": "word"
+      },
+      {
+       "id": "cheese",
+       "en": "cheese",
+       "picture": "Cheese wedge",
+       "type": "word"
+      },
+      {
+       "id": "egg",
+       "en": "egg",
+       "picture": "Egg",
+       "type": "word"
+      },
+      {
+       "id": "milk",
+       "en": "milk",
+       "picture": "Glass of milk",
+       "type": "word"
+      },
+      {
+       "id": "water",
+       "en": "water",
+       "picture": "Droplet",
+       "type": "word"
+      },
+      {
+       "id": "cake",
+       "en": "cake",
+       "picture": "Shortcake",
+       "type": "word"
+      },
+      {
+       "id": "cookie",
+       "en": "cookie",
+       "picture": "Cookie",
+       "type": "word"
+      },
+      {
+       "id": "ice_cream",
+       "en": "ice cream",
+       "picture": "Soft ice cream",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "vegetables",
+     "name": "Vegetables",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "carrot",
+       "en": "carrot",
+       "picture": "Carrot",
+       "type": "word"
+      },
+      {
+       "id": "potato",
+       "en": "potato",
+       "picture": "Potato",
+       "type": "word"
+      },
+      {
+       "id": "tomato",
+       "en": "tomato",
+       "picture": "Tomato",
+       "type": "word"
+      },
+      {
+       "id": "corn",
+       "en": "corn",
+       "picture": "Ear of corn",
+       "type": "word"
+      },
+      {
+       "id": "cucumber",
+       "en": "cucumber",
+       "picture": "Cucumber",
+       "type": "word"
+      },
+      {
+       "id": "broccoli",
+       "en": "broccoli",
+       "picture": "Broccoli",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "clothes",
+     "name": "Clothes",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "shoe",
+       "en": "shoe",
+       "picture": "Running shoe",
+       "type": "word"
+      },
+      {
+       "id": "socks",
+       "en": "socks",
+       "picture": "Socks",
+       "type": "word"
+      },
+      {
+       "id": "hat",
+       "en": "hat",
+       "picture": "Billed cap",
+       "type": "word"
+      },
+      {
+       "id": "tshirt",
+       "en": "T-shirt",
+       "picture": "T-shirt",
+       "type": "word"
+      },
+      {
+       "id": "dress",
+       "en": "dress",
+       "picture": "Dress",
+       "type": "word"
+      },
+      {
+       "id": "coat",
+       "en": "coat",
+       "picture": "Coat",
+       "type": "word"
+      },
+      {
+       "id": "trousers",
+       "en": "trousers",
+       "picture": "Jeans",
+       "type": "word"
+      },
+      {
+       "id": "scarf",
+       "en": "scarf",
+       "picture": "Scarf",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "colours_2",
+     "name": "More colours",
+     "activity": "colour",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "orange_colour",
+       "en": "orange (the colour)",
+       "picture": "Orange circle",
+       "type": "colour"
+      },
+      {
+       "id": "purple",
+       "en": "purple",
+       "picture": "Purple circle",
+       "type": "colour"
+      },
+      {
+       "id": "pink",
+       "en": "pink",
+       "picture": "Pink heart",
+       "type": "colour"
+      },
+      {
+       "id": "brown",
+       "en": "brown",
+       "picture": "Brown circle",
+       "type": "colour"
+      },
+      {
+       "id": "black",
+       "en": "black",
+       "picture": "Black circle",
+       "type": "colour"
+      },
+      {
+       "id": "white",
+       "en": "white",
+       "picture": "White circle",
+       "type": "colour"
+      }
+     ]
+    },
+    {
+     "id": "shapes",
+     "name": "Shapes",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "circle",
+       "en": "circle",
+       "picture": "Hollow red circle",
+       "type": "word"
+      },
+      {
+       "id": "square",
+       "en": "square",
+       "picture": "Blue square",
+       "type": "word"
+      },
+      {
+       "id": "triangle",
+       "en": "triangle",
+       "picture": "Red triangle",
+       "type": "word"
+      },
+      {
+       "id": "star_shape",
+       "en": "star",
+       "picture": "Star",
+       "type": "word"
+      },
+      {
+       "id": "heart",
+       "en": "heart",
+       "picture": "Red heart",
+       "type": "word"
+      },
+      {
+       "id": "diamond",
+       "en": "diamond",
+       "picture": "Large orange diamond",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "numbers_2",
+     "name": "Four to ten",
+     "activity": "count",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "four",
+       "en": "four",
+       "picture": "Keycap 4",
+       "type": "number"
+      },
+      {
+       "id": "five",
+       "en": "five",
+       "picture": "Keycap 5",
+       "type": "number"
+      },
+      {
+       "id": "six",
+       "en": "six",
+       "picture": "Keycap 6",
+       "type": "number"
+      },
+      {
+       "id": "seven",
+       "en": "seven",
+       "picture": "Keycap 7",
+       "type": "number"
+      },
+      {
+       "id": "eight",
+       "en": "eight",
+       "picture": "Keycap 8",
+       "type": "number"
+      },
+      {
+       "id": "nine",
+       "en": "nine",
+       "picture": "Keycap 9",
+       "type": "number"
+      },
+      {
+       "id": "ten",
+       "en": "ten",
+       "picture": "Keycap 10",
+       "type": "number"
+      }
+     ]
+    },
+    {
+     "id": "family",
+     "name": "My family",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "mum",
+       "en": "mum",
+       "picture": "Woman",
+       "type": "word"
+      },
+      {
+       "id": "dad",
+       "en": "dad",
+       "picture": "Man",
+       "type": "word"
+      },
+      {
+       "id": "baby",
+       "en": "baby",
+       "picture": "Baby",
+       "type": "word"
+      },
+      {
+       "id": "brother",
+       "en": "brother",
+       "picture": "Boy",
+       "type": "word"
+      },
+      {
+       "id": "sister",
+       "en": "sister",
+       "picture": "Girl",
+       "type": "word"
+      },
+      {
+       "id": "grandma",
+       "en": "grandma",
+       "picture": "Old woman",
+       "type": "word"
+      },
+      {
+       "id": "grandpa",
+       "en": "grandpa",
+       "picture": "Old man",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "home",
+     "name": "At home",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "house",
+       "en": "house",
+       "picture": "House",
+       "type": "word"
+      },
+      {
+       "id": "door",
+       "en": "door",
+       "picture": "Door",
+       "type": "word"
+      },
+      {
+       "id": "window",
+       "en": "window",
+       "picture": "Window",
+       "type": "word"
+      },
+      {
+       "id": "bed",
+       "en": "bed",
+       "picture": "Bed",
+       "type": "word"
+      },
+      {
+       "id": "chair",
+       "en": "chair",
+       "picture": "Chair",
+       "type": "word"
+      },
+      {
+       "id": "bath",
+       "en": "bath",
+       "picture": "Bathtub",
+       "type": "word"
+      },
+      {
+       "id": "toilet",
+       "en": "toilet",
+       "picture": "Toilet",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "body",
+     "name": "My body",
+     "activity": "act",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "arm",
+       "en": "arm",
+       "picture": "Flexed biceps",
+       "type": "word"
+      },
+      {
+       "id": "leg",
+       "en": "leg",
+       "picture": "Leg",
+       "type": "word"
+      },
+      {
+       "id": "tooth",
+       "en": "tooth",
+       "picture": "Tooth",
+       "type": "word"
+      },
+      {
+       "id": "tongue",
+       "en": "tongue",
+       "picture": "Tongue",
+       "type": "word"
+      },
+      {
+       "id": "finger",
+       "en": "finger",
+       "picture": "Backhand index pointing up",
+       "type": "word"
+      },
+      {
+       "id": "head",
+       "en": "head",
+       "picture": "Bust in silhouette",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "wild",
+     "name": "Wild animals",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "lion",
+       "en": "lion",
+       "picture": "Lion",
+       "type": "word"
+      },
+      {
+       "id": "elephant",
+       "en": "elephant",
+       "picture": "Elephant",
+       "type": "word"
+      },
+      {
+       "id": "monkey",
+       "en": "monkey",
+       "picture": "Monkey",
+       "type": "word"
+      },
+      {
+       "id": "giraffe",
+       "en": "giraffe",
+       "picture": "Giraffe",
+       "type": "word"
+      },
+      {
+       "id": "zebra",
+       "en": "zebra",
+       "picture": "Zebra",
+       "type": "word"
+      },
+      {
+       "id": "bear",
+       "en": "bear",
+       "picture": "Bear",
+       "type": "word"
+      },
+      {
+       "id": "tiger",
+       "en": "tiger",
+       "picture": "Tiger",
+       "type": "word"
+      },
+      {
+       "id": "snake",
+       "en": "snake",
+       "picture": "Snake",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "transport",
+     "name": "Things that go",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "bus",
+       "en": "bus",
+       "picture": "Bus",
+       "type": "word"
+      },
+      {
+       "id": "train",
+       "en": "train",
+       "picture": "Locomotive",
+       "type": "word"
+      },
+      {
+       "id": "plane",
+       "en": "plane",
+       "picture": "Airplane",
+       "type": "word"
+      },
+      {
+       "id": "boat",
+       "en": "boat",
+       "picture": "Sailboat",
+       "type": "word"
+      },
+      {
+       "id": "bike",
+       "en": "bike",
+       "picture": "Bicycle",
+       "type": "word"
+      },
+      {
+       "id": "tractor",
+       "en": "tractor",
+       "picture": "Tractor",
+       "type": "word"
+      },
+      {
+       "id": "rocket",
+       "en": "rocket",
+       "picture": "Rocket",
+       "type": "word"
+      },
+      {
+       "id": "helicopter",
+       "en": "helicopter",
+       "picture": "Helicopter",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "weather",
+     "name": "Weather",
+     "activity": "touch",
+     "from": 30,
+     "ideas": [
+      {
+       "id": "sun",
+       "en": "sun",
+       "picture": "Sun",
+       "type": "word"
+      },
+      {
+       "id": "rain",
+       "en": "rain",
+       "picture": "Cloud with rain",
+       "type": "word"
+      },
+      {
+       "id": "snow",
+       "en": "snow",
+       "picture": "Snowflake",
+       "type": "word"
+      },
+      {
+       "id": "wind",
+       "en": "wind",
+       "picture": "Wind face",
+       "type": "word"
+      },
+      {
+       "id": "cloud",
+       "en": "cloud",
+       "picture": "Cloud",
+       "type": "word"
+      },
+      {
+       "id": "rainbow",
+       "en": "rainbow",
+       "picture": "Rainbow",
+       "type": "word"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Actions and describing",
+   "units": [
+    {
+     "id": "moving",
+     "name": "Moving",
+     "activity": "act",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "run",
+       "en": "run",
+       "picture": "Person running",
+       "type": "action"
+      },
+      {
+       "id": "walk",
+       "en": "walk",
+       "picture": "Person walking",
+       "type": "action"
+      },
+      {
+       "id": "jump",
+       "en": "jump",
+       "picture": "Frog",
+       "type": "action"
+      },
+      {
+       "id": "dance",
+       "en": "dance",
+       "picture": "Woman dancing",
+       "type": "action"
+      },
+      {
+       "id": "swim",
+       "en": "swim",
+       "picture": "Person swimming",
+       "type": "action"
+      },
+      {
+       "id": "climb",
+       "en": "climb",
+       "picture": "Person climbing",
+       "type": "action"
+      }
+     ]
+    },
+    {
+     "id": "doing",
+     "name": "Things we do",
+     "activity": "act",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "sing",
+       "en": "sing",
+       "picture": "Microphone",
+       "type": "action"
+      },
+      {
+       "id": "read",
+       "en": "read",
+       "picture": "Open book",
+       "type": "action"
+      },
+      {
+       "id": "draw",
+       "en": "draw",
+       "picture": "Crayon",
+       "type": "action"
+      },
+      {
+       "id": "wash",
+       "en": "wash",
+       "picture": "Soap",
+       "type": "action"
+      },
+      {
+       "id": "brush",
+       "en": "brush your teeth",
+       "picture": "Toothbrush",
+       "type": "action"
+      },
+      {
+       "id": "play",
+       "en": "play",
+       "picture": "Puzzle piece",
+       "type": "action"
+      }
+     ]
+    },
+    {
+     "id": "feelings",
+     "name": "Feelings",
+     "activity": "act",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "happy",
+       "en": "happy",
+       "picture": "Grinning face",
+       "type": "describe"
+      },
+      {
+       "id": "sad",
+       "en": "sad",
+       "picture": "Frowning face",
+       "type": "describe"
+      },
+      {
+       "id": "angry",
+       "en": "angry",
+       "picture": "Angry face",
+       "type": "describe"
+      },
+      {
+       "id": "tired",
+       "en": "tired",
+       "picture": "Tired face",
+       "type": "describe"
+      },
+      {
+       "id": "scared",
+       "en": "scared",
+       "picture": "Fearful face",
+       "type": "describe"
+      },
+      {
+       "id": "surprised",
+       "en": "surprised",
+       "picture": "Astonished face",
+       "type": "describe"
+      }
+     ]
+    },
+    {
+     "id": "big_small",
+     "name": "Big and small",
+     "activity": "opposites",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "big",
+       "en": "big",
+       "picture": "Elephant",
+       "type": "describe"
+      },
+      {
+       "id": "small",
+       "en": "small",
+       "picture": "Mouse",
+       "type": "describe"
+      },
+      {
+       "id": "hot",
+       "en": "hot",
+       "picture": "Fire",
+       "type": "describe"
+      },
+      {
+       "id": "cold",
+       "en": "cold",
+       "picture": "Ice",
+       "type": "describe"
+      },
+      {
+       "id": "fast",
+       "en": "fast",
+       "picture": "Racing car",
+       "type": "describe"
+      },
+      {
+       "id": "slow",
+       "en": "slow",
+       "picture": "Snail",
+       "type": "describe"
+      }
+     ]
+    },
+    {
+     "id": "up_down",
+     "name": "Up and down",
+     "activity": "opposites",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "up",
+       "en": "up",
+       "picture": "Up arrow",
+       "type": "describe"
+      },
+      {
+       "id": "down",
+       "en": "down",
+       "picture": "Down arrow",
+       "type": "describe"
+      },
+      {
+       "id": "day",
+       "en": "day",
+       "picture": "Sun with face",
+       "type": "describe"
+      },
+      {
+       "id": "night",
+       "en": "night",
+       "picture": "Crescent moon",
+       "type": "describe"
+      },
+      {
+       "id": "wet",
+       "en": "wet",
+       "picture": "Umbrella with rain drops",
+       "type": "describe"
+      },
+      {
+       "id": "dry",
+       "en": "dry",
+       "picture": "Desert",
+       "type": "describe"
+      }
+     ]
+    },
+    {
+     "id": "sea",
+     "name": "In the sea",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "whale",
+       "en": "whale",
+       "picture": "Spouting whale",
+       "type": "word"
+      },
+      {
+       "id": "octopus",
+       "en": "octopus",
+       "picture": "Octopus",
+       "type": "word"
+      },
+      {
+       "id": "crab",
+       "en": "crab",
+       "picture": "Crab",
+       "type": "word"
+      },
+      {
+       "id": "shell",
+       "en": "shell",
+       "picture": "Spiral shell",
+       "type": "word"
+      },
+      {
+       "id": "shark",
+       "en": "shark",
+       "picture": "Shark",
+       "type": "word"
+      },
+      {
+       "id": "turtle",
+       "en": "turtle",
+       "picture": "Turtle",
+       "type": "word"
+      },
+      {
+       "id": "dolphin",
+       "en": "dolphin",
+       "picture": "Dolphin",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "birds",
+     "name": "Birds",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "owl",
+       "en": "owl",
+       "picture": "Owl",
+       "type": "word"
+      },
+      {
+       "id": "parrot",
+       "en": "parrot",
+       "picture": "Parrot",
+       "type": "word"
+      },
+      {
+       "id": "penguin",
+       "en": "penguin",
+       "picture": "Penguin",
+       "type": "word"
+      },
+      {
+       "id": "eagle",
+       "en": "eagle",
+       "picture": "Eagle",
+       "type": "word"
+      },
+      {
+       "id": "swan",
+       "en": "swan",
+       "picture": "Swan",
+       "type": "word"
+      },
+      {
+       "id": "flamingo",
+       "en": "flamingo",
+       "picture": "Flamingo",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "zoo",
+     "name": "At the zoo",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "kangaroo",
+       "en": "kangaroo",
+       "picture": "Kangaroo",
+       "type": "word"
+      },
+      {
+       "id": "hippo",
+       "en": "hippo",
+       "picture": "Hippopotamus",
+       "type": "word"
+      },
+      {
+       "id": "crocodile",
+       "en": "crocodile",
+       "picture": "Crocodile",
+       "type": "word"
+      },
+      {
+       "id": "panda",
+       "en": "panda",
+       "picture": "Panda",
+       "type": "word"
+      },
+      {
+       "id": "koala",
+       "en": "koala",
+       "picture": "Koala",
+       "type": "word"
+      },
+      {
+       "id": "camel",
+       "en": "camel",
+       "picture": "Camel",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "garden",
+     "name": "In the garden",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "butterfly",
+       "en": "butterfly",
+       "picture": "Butterfly",
+       "type": "word"
+      },
+      {
+       "id": "bee",
+       "en": "bee",
+       "picture": "Honeybee",
+       "type": "word"
+      },
+      {
+       "id": "ladybird",
+       "en": "ladybird",
+       "picture": "Lady beetle",
+       "type": "word"
+      },
+      {
+       "id": "snail",
+       "en": "snail",
+       "picture": "Snail",
+       "type": "word"
+      },
+      {
+       "id": "worm",
+       "en": "worm",
+       "picture": "Worm",
+       "type": "word"
+      },
+      {
+       "id": "flower",
+       "en": "flower",
+       "picture": "Tulip",
+       "type": "word"
+      },
+      {
+       "id": "tree",
+       "en": "tree",
+       "picture": "Deciduous tree",
+       "type": "word"
+      },
+      {
+       "id": "leaf",
+       "en": "leaf",
+       "picture": "Leaf fluttering in wind",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "kitchen",
+     "name": "In the kitchen",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "cup",
+       "en": "cup",
+       "picture": "Hot beverage",
+       "type": "word"
+      },
+      {
+       "id": "spoon",
+       "en": "spoon",
+       "picture": "Spoon",
+       "type": "word"
+      },
+      {
+       "id": "fork",
+       "en": "fork",
+       "picture": "Fork and knife",
+       "type": "word"
+      },
+      {
+       "id": "bowl",
+       "en": "bowl",
+       "picture": "Bowl with spoon",
+       "type": "word"
+      },
+      {
+       "id": "bottle",
+       "en": "bottle",
+       "picture": "Baby bottle",
+       "type": "word"
+      },
+      {
+       "id": "knife",
+       "en": "knife",
+       "picture": "Kitchen knife",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "bathroom",
+     "name": "Bath and bed",
+     "activity": "touch",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "toothbrush",
+       "en": "toothbrush",
+       "picture": "Toothbrush",
+       "type": "word"
+      },
+      {
+       "id": "soap",
+       "en": "soap",
+       "picture": "Soap",
+       "type": "word"
+      },
+      {
+       "id": "sponge",
+       "en": "sponge",
+       "picture": "Sponge",
+       "type": "word"
+      },
+      {
+       "id": "pyjamas",
+       "en": "pyjamas",
+       "picture": "Shorts",
+       "type": "word"
+      },
+      {
+       "id": "lamp",
+       "en": "lamp",
+       "picture": "Light bulb",
+       "type": "word"
+      },
+      {
+       "id": "book",
+       "en": "book",
+       "picture": "Green book",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "how_many",
+     "name": "How many?",
+     "activity": "count",
+     "from": 36,
+     "ideas": [
+      {
+       "id": "how_many",
+       "en": "How many?",
+       "picture": "Abacus",
+       "type": "phrase"
+      },
+      {
+       "id": "apples",
+       "en": "apples",
+       "picture": "Red apple",
+       "type": "word"
+      },
+      {
+       "id": "cars",
+       "en": "cars",
+       "picture": "Automobile",
+       "type": "word"
+      },
+      {
+       "id": "stars",
+       "en": "stars",
+       "picture": "Star",
+       "type": "word"
+      },
+      {
+       "id": "many",
+       "en": "many",
+       "picture": "Balloon",
+       "type": "describe"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Little phrases",
+   "units": [
+    {
+     "id": "whats_this",
+     "name": "What's this?",
+     "activity": "talk",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "whats_this",
+       "en": "What's this?",
+       "picture": "Magnifying glass tilted left",
+       "type": "phrase"
+      },
+      {
+       "id": "its_a",
+       "en": "It's a …",
+       "picture": "Index pointing at the viewer",
+       "type": "phrase"
+      },
+      {
+       "id": "i_see",
+       "en": "I can see …",
+       "picture": "Eyes",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "i_like",
+     "name": "I like",
+     "activity": "talk",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "i_like",
+       "en": "I like …",
+       "picture": "Red heart",
+       "type": "phrase"
+      },
+      {
+       "id": "i_dont_like",
+       "en": "I don't like …",
+       "picture": "Broken heart",
+       "type": "phrase"
+      },
+      {
+       "id": "yummy",
+       "en": "yummy",
+       "picture": "Face savoring food",
+       "type": "phrase"
+      },
+      {
+       "id": "yucky",
+       "en": "yucky",
+       "picture": "Nauseated face",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "what_colour",
+     "name": "What colour?",
+     "activity": "colour",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "what_colour",
+       "en": "What colour is it?",
+       "picture": "Artist palette",
+       "type": "phrase"
+      },
+      {
+       "id": "red_apple",
+       "en": "a red apple",
+       "picture": "Red apple",
+       "type": "phrase"
+      },
+      {
+       "id": "yellow_banana",
+       "en": "a yellow banana",
+       "picture": "Banana",
+       "type": "phrase"
+      },
+      {
+       "id": "green_frog",
+       "en": "a green frog",
+       "picture": "Frog",
+       "type": "phrase"
+      },
+      {
+       "id": "blue_car",
+       "en": "a blue car",
+       "picture": "Automobile",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "where",
+     "name": "Where is it?",
+     "activity": "touch",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "where",
+       "en": "Where is …?",
+       "picture": "Magnifying glass tilted right",
+       "type": "phrase"
+      },
+      {
+       "id": "in",
+       "en": "in",
+       "picture": "Package",
+       "type": "describe"
+      },
+      {
+       "id": "on",
+       "en": "on",
+       "picture": "Chair",
+       "type": "describe"
+      },
+      {
+       "id": "under",
+       "en": "under",
+       "picture": "Umbrella",
+       "type": "describe"
+      },
+      {
+       "id": "next_to",
+       "en": "next to",
+       "picture": "Two hearts",
+       "type": "describe"
+      }
+     ]
+    },
+    {
+     "id": "please",
+     "name": "Please and thank you",
+     "activity": "talk",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "please",
+       "en": "please",
+       "picture": "Pleading face",
+       "type": "phrase"
+      },
+      {
+       "id": "can_i_have",
+       "en": "Can I have …, please?",
+       "picture": "Open hands",
+       "type": "phrase"
+      },
+      {
+       "id": "here_you_are",
+       "en": "Here you are.",
+       "picture": "Palms up together",
+       "type": "phrase"
+      },
+      {
+       "id": "youre_welcome",
+       "en": "You're welcome.",
+       "picture": "Smiling face with smiling eyes",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "places",
+     "name": "Places",
+     "activity": "touch",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "school",
+       "en": "school",
+       "picture": "School",
+       "type": "word"
+      },
+      {
+       "id": "shop",
+       "en": "shop",
+       "picture": "Convenience store",
+       "type": "word"
+      },
+      {
+       "id": "park",
+       "en": "park",
+       "picture": "National park",
+       "type": "word"
+      },
+      {
+       "id": "hospital",
+       "en": "hospital",
+       "picture": "Hospital",
+       "type": "word"
+      },
+      {
+       "id": "beach",
+       "en": "beach",
+       "picture": "Beach with umbrella",
+       "type": "word"
+      },
+      {
+       "id": "playground",
+       "en": "playground",
+       "picture": "Carousel horse",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "dinner_time",
+     "name": "Dinner time",
+     "activity": "touch",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "pizza",
+       "en": "pizza",
+       "picture": "Pizza",
+       "type": "word"
+      },
+      {
+       "id": "sandwich",
+       "en": "sandwich",
+       "picture": "Sandwich",
+       "type": "word"
+      },
+      {
+       "id": "soup",
+       "en": "soup",
+       "picture": "Pot of food",
+       "type": "word"
+      },
+      {
+       "id": "rice",
+       "en": "rice",
+       "picture": "Cooked rice",
+       "type": "word"
+      },
+      {
+       "id": "noodles",
+       "en": "noodles",
+       "picture": "Steaming bowl",
+       "type": "word"
+      },
+      {
+       "id": "popcorn",
+       "en": "popcorn",
+       "picture": "Popcorn",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "jobs",
+     "name": "People who help",
+     "activity": "touch",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "doctor",
+       "en": "doctor",
+       "picture": "Health worker",
+       "type": "word"
+      },
+      {
+       "id": "teacher",
+       "en": "teacher",
+       "picture": "Teacher",
+       "type": "word"
+      },
+      {
+       "id": "cook",
+       "en": "cook",
+       "picture": "Cook",
+       "type": "word"
+      },
+      {
+       "id": "farmer",
+       "en": "farmer",
+       "picture": "Farmer",
+       "type": "word"
+      },
+      {
+       "id": "firefighter",
+       "en": "firefighter",
+       "picture": "Firefighter",
+       "type": "word"
+      },
+      {
+       "id": "police",
+       "en": "police officer",
+       "picture": "Police officer",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "toys_2",
+     "name": "More toys",
+     "activity": "touch",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "doll",
+       "en": "doll",
+       "picture": "Nesting dolls",
+       "type": "word"
+      },
+      {
+       "id": "puzzle",
+       "en": "puzzle",
+       "picture": "Puzzle piece",
+       "type": "word"
+      },
+      {
+       "id": "blocks",
+       "en": "blocks",
+       "picture": "Brick",
+       "type": "word"
+      },
+      {
+       "id": "robot",
+       "en": "robot",
+       "picture": "Robot",
+       "type": "word"
+      },
+      {
+       "id": "yo_yo",
+       "en": "yo-yo",
+       "picture": "Yo-yo",
+       "type": "word"
+      },
+      {
+       "id": "train_set",
+       "en": "toy train",
+       "picture": "Railway car",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "clothes_2",
+     "name": "Getting dressed",
+     "activity": "act",
+     "from": 42,
+     "ideas": [
+      {
+       "id": "put_on",
+       "en": "put on",
+       "picture": "Gloves",
+       "type": "phrase"
+      },
+      {
+       "id": "take_off",
+       "en": "take off",
+       "picture": "Running shoe",
+       "type": "phrase"
+      },
+      {
+       "id": "gloves",
+       "en": "gloves",
+       "picture": "Gloves",
+       "type": "word"
+      },
+      {
+       "id": "boots",
+       "en": "boots",
+       "picture": "Womans boot",
+       "type": "word"
+      },
+      {
+       "id": "glasses",
+       "en": "glasses",
+       "picture": "Glasses",
+       "type": "word"
+      },
+      {
+       "id": "umbrella",
+       "en": "umbrella",
+       "picture": "Closed umbrella",
+       "type": "word"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "name": "Tiny conversations",
+   "units": [
+    {
+     "id": "how_are_you",
+     "name": "How are you?",
+     "activity": "talk",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "how_are_you",
+       "en": "How are you?",
+       "picture": "Waving hand",
+       "type": "phrase"
+      },
+      {
+       "id": "im_fine",
+       "en": "I'm fine.",
+       "picture": "Slightly smiling face",
+       "type": "phrase"
+      },
+      {
+       "id": "im_hungry",
+       "en": "I'm hungry.",
+       "picture": "Fork and knife with plate",
+       "type": "phrase"
+      },
+      {
+       "id": "im_tired",
+       "en": "I'm tired.",
+       "picture": "Sleepy face",
+       "type": "phrase"
+      },
+      {
+       "id": "im_happy",
+       "en": "I'm happy.",
+       "picture": "Grinning face with big eyes",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "about_me",
+     "name": "About me",
+     "activity": "talk",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "my_name_is",
+       "en": "My name is …",
+       "picture": "Name badge",
+       "type": "phrase"
+      },
+      {
+       "id": "im_years",
+       "en": "I'm … years old.",
+       "picture": "Birthday cake",
+       "type": "phrase"
+      },
+      {
+       "id": "i_have",
+       "en": "I have a …",
+       "picture": "Open hands",
+       "type": "phrase"
+      },
+      {
+       "id": "i_can",
+       "en": "I can …",
+       "picture": "Flexed biceps",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "can_you",
+     "name": "Can you?",
+     "activity": "act",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "can_you",
+       "en": "Can you …?",
+       "picture": "Thinking face",
+       "type": "phrase"
+      },
+      {
+       "id": "yes_i_can",
+       "en": "Yes, I can!",
+       "picture": "Thumbs up",
+       "type": "phrase"
+      },
+      {
+       "id": "no_i_cant",
+       "en": "No, I can't.",
+       "picture": "Thumbs down",
+       "type": "phrase"
+      },
+      {
+       "id": "fly",
+       "en": "fly",
+       "picture": "Eagle",
+       "type": "action"
+      },
+      {
+       "id": "hop",
+       "en": "hop",
+       "picture": "Rabbit",
+       "type": "action"
+      },
+      {
+       "id": "spin",
+       "en": "spin",
+       "picture": "Cyclone",
+       "type": "action"
+      }
+     ]
+    },
+    {
+     "id": "good_morning",
+     "name": "Morning and night",
+     "activity": "talk",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "good_morning",
+       "en": "Good morning!",
+       "picture": "Sunrise",
+       "type": "phrase"
+      },
+      {
+       "id": "good_night",
+       "en": "Good night!",
+       "picture": "Crescent moon",
+       "type": "phrase"
+      },
+      {
+       "id": "breakfast",
+       "en": "breakfast",
+       "picture": "Pancakes",
+       "type": "word"
+      },
+      {
+       "id": "dinner",
+       "en": "dinner",
+       "picture": "Spaghetti",
+       "type": "word"
+      },
+      {
+       "id": "wake_up",
+       "en": "wake up",
+       "picture": "Alarm clock",
+       "type": "action"
+      }
+     ]
+    },
+    {
+     "id": "birthday",
+     "name": "A birthday",
+     "activity": "talk",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "happy_birthday",
+       "en": "Happy birthday!",
+       "picture": "Birthday cake",
+       "type": "phrase"
+      },
+      {
+       "id": "present",
+       "en": "present",
+       "picture": "Wrapped gift",
+       "type": "word"
+      },
+      {
+       "id": "candle",
+       "en": "candle",
+       "picture": "Candle",
+       "type": "word"
+      },
+      {
+       "id": "party",
+       "en": "party",
+       "picture": "Party popper",
+       "type": "word"
+      },
+      {
+       "id": "friend",
+       "en": "friend",
+       "picture": "People hugging",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "seasons",
+     "name": "The year",
+     "activity": "touch",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "spring",
+       "en": "spring",
+       "picture": "Blossom",
+       "type": "word"
+      },
+      {
+       "id": "summer",
+       "en": "summer",
+       "picture": "Sun",
+       "type": "word"
+      },
+      {
+       "id": "autumn",
+       "en": "autumn",
+       "picture": "Fallen leaf",
+       "type": "word"
+      },
+      {
+       "id": "winter",
+       "en": "winter",
+       "picture": "Snowman",
+       "type": "word"
+      },
+      {
+       "id": "hot_day",
+       "en": "It's hot.",
+       "picture": "Hot face",
+       "type": "phrase"
+      },
+      {
+       "id": "cold_day",
+       "en": "It's cold.",
+       "picture": "Cold face",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "outdoors",
+     "name": "Outdoors",
+     "activity": "touch",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "mountain",
+       "en": "mountain",
+       "picture": "Mountain",
+       "type": "word"
+      },
+      {
+       "id": "sea_wave",
+       "en": "sea",
+       "picture": "Water wave",
+       "type": "word"
+      },
+      {
+       "id": "forest",
+       "en": "forest",
+       "picture": "Evergreen tree",
+       "type": "word"
+      },
+      {
+       "id": "island",
+       "en": "island",
+       "picture": "Desert island",
+       "type": "word"
+      },
+      {
+       "id": "volcano",
+       "en": "volcano",
+       "picture": "Volcano",
+       "type": "word"
+      },
+      {
+       "id": "cactus",
+       "en": "cactus",
+       "picture": "Cactus",
+       "type": "word"
+      }
+     ]
+    },
+    {
+     "id": "who_what",
+     "name": "Who and what",
+     "activity": "talk",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "who",
+       "en": "Who is it?",
+       "picture": "Detective",
+       "type": "phrase"
+      },
+      {
+       "id": "what_doing",
+       "en": "What are you doing?",
+       "picture": "Thinking face",
+       "type": "phrase"
+      },
+      {
+       "id": "look",
+       "en": "Look!",
+       "picture": "Eyes",
+       "type": "phrase"
+      },
+      {
+       "id": "my_turn",
+       "en": "My turn!",
+       "picture": "Raising hands",
+       "type": "phrase"
+      },
+      {
+       "id": "your_turn",
+       "en": "Your turn!",
+       "picture": "Index pointing at the viewer",
+       "type": "phrase"
+      }
+     ]
+    },
+    {
+     "id": "music",
+     "name": "Music",
+     "activity": "act",
+     "from": 48,
+     "ideas": [
+      {
+       "id": "guitar",
+       "en": "guitar",
+       "picture": "Guitar",
+       "type": "word"
+      },
+      {
+       "id": "piano",
+       "en": "piano",
+       "picture": "Musical keyboard",
+       "type": "word"
+      },
+      {
+       "id": "trumpet",
+       "en": "trumpet",
+       "picture": "Trumpet",
+       "type": "word"
+      },
+      {
+       "id": "violin",
+       "en": "violin",
+       "picture": "Violin",
+       "type": "word"
+      },
+      {
+       "id": "loud",
+       "en": "loud",
+       "picture": "Loudspeaker",
+       "type": "describe"
+      },
+      {
+       "id": "quiet",
+       "en": "quiet",
+       "picture": "Shushing face",
+       "type": "describe"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,16 @@
+menu "Cubey"
+    # This board's server and the token it sends (server/.env CUBEY_DEVICE_TOKEN), in the git-ignored sdkconfig.local.
+    # The Wi-Fi is only a first network, usually left empty: the cube joins networks on its own screens.
+    config CUBEY_WIFI_SSID
+        string "Wi-Fi network"
+        default ""
+    config CUBEY_WIFI_PASSWORD
+        string "Wi-Fi password"
+        default ""
+    config CUBEY_SERVER_URL
+        string "Server WebSocket URL"
+        default "ws://127.0.0.1:8788/device"
+    config CUBEY_DEVICE_TOKEN
+        string "Device token"
+        default ""
+endmenu

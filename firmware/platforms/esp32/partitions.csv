@@ -1,0 +1,7 @@
+# The 16 MB flash: NVS (Wi-Fi's), one app, and esp-sr's models (its voice detector, audio.cpp); updates over
+# the air come later.
+# Name,   Type, SubType,  Offset,   Size
+nvs,      data, nvs,      0x9000,   0x6000
+phy_init, data, phy,      0xf000,   0x1000
+factory,  app,  factory,  0x10000,  0x600000
+model,    data, spiffs,   0x610000, 0x100000

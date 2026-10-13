@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bunx tsc --noEmit
+
+  firmware:
+    # The simulator links AVFoundation, so the host build and its tests run on macOS.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: brew install ninja sdl2
+      - run: cmake -S firmware -B build/firmware -G Ninja
+      - run: cmake --build build/firmware
+      - run: ctest --test-dir build/firmware --output-on-failure

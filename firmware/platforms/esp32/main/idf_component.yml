@@ -1,0 +1,11 @@
+dependencies:
+  idf: ">=6.1"
+  lvgl/lvgl: "9.6.0"
+  espressif/cjson: "*"
+  espressif/esp_websocket_client: "^1.4" # the server link
+  espressif/mdns: "^1.8" # the Mac's server by its .local name
+  # Echo cancelling (audio.cpp), so the board hears her over its own speech.
+  espressif/esp-sr: "^2.5.3"
+  # Waveshare's BSP for the board: its I2C bus, touch and codecs.
+  waveshare/esp32_s3_touch_amoled_2_16: "^2.0.1"
+  espressif/esp_lcd_co5300: "^2.2.0" # its panel, set up in board_amoled_2_16.cpp
