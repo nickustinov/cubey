@@ -112,7 +112,7 @@ TEST_CASE("then all of it passes, lit, as text Cubey writes; a word with a lette
     CHECK(pass == letter::length(text.words[0]));
     CHECK(same_lit(word, letter::passing(word, pass / 3), text, letter::frame(text, pass / 3)));
     CHECK(count(word, letter::passing(word, pass / 3), dots::Dot::Dim) == 0);
-    CHECK(letter::spelling("kы").words.empty());
+    CHECK(letter::spelling("kω").words.empty());
     CHECK(letter::spelling("").words.empty());
 }
 

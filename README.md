@@ -34,7 +34,7 @@ Cubey is a parenting tool, not a screen, a toy or a chatbot.
 
 ## What it can do
 
-Cubey understands what the child means in any words, in the language it speaks: English, Latvian, Lithuanian, French, Portuguese, German, Spanish or Russian. The phrases below are examples, not exact commands.
+Cubey understands what the child means in any words, in the language it speaks: English, French, German, Spanish, Italian, Portuguese, Dutch, Polish, Swedish, Danish, Norwegian, Finnish, Estonian, Russian, Ukrainian, Latvian or Lithuanian. The phrases below are examples, not exact commands.
 
 ### Talking
 

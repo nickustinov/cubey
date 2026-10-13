@@ -324,6 +324,12 @@ test("each game's rules are in the prompt only while she plays it: one line each
 
 test("the letter a chain goes on with is the server's: the last of Cubey's word (Flash-Lite said z for ezis)", () => {
   expect(chainLetter("ezis")).toBe("s");
+  expect(chainLetter("ночь")).toBe("ч"); // Russian and Ukrainian: no word begins with ь, ъ or ы
+  expect(chainLetter("сады")).toBe("д");
+  expect(chainLetter("сіль")).toBe("л");
+  const ru = { ...anna, language: "ru" as const };
+  expect(cubeyPrompt(ru, { earlier: "", now: evening, mode: "cascade", playing: "chain" })).toContain("A word ending in ь, ъ or ы goes on from the letter before it");
+  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade", playing: "chain" })).not.toContain("ending in ь");
   expect(chainLetter("Vāvere!")).toBe("e");
   expect(chainLetter("")).toBeUndefined();
   expect(spell("Egle,.")).toEqual(["e", "g", "l", "e"]);

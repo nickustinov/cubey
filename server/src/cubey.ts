@@ -13,7 +13,12 @@ export type Playing = "find" | "chain" | "letters" | "count" | "spell";
 // Words letter by letter, as the server spells them for the games with letters: a model sees words, not letters
 // (Flash-Lite told her "ezis" goes on with z, 2026-10-10).
 export const spell = (word: string) => [...word.toLowerCase()].filter((c) => /\p{L}/u.test(c));
-export const chainLetter = (word: string) => spell(word).at(-1); // the letter a word chain goes on with
+// The letter a word chain goes on with: its word's last, but ь, ъ or ы (Russian, Ukrainian), which no word begins with.
+export function chainLetter(word: string): string | undefined {
+  const letters = spell(word);
+  while (letters.length > 1 && "ьъы".includes(letters.at(-1)!)) letters.pop();
+  return letters.at(-1);
+}
 const herWords = (heard: string) => heard.split(/\s+/).map(spell).filter((w) => w.length).slice(0, 8);
 const spelledOut = (words: string[][]) => words.map((w) => `${w.join("")} (${w.join("-")})`).join(", ");
 // Her word on the letter she needed (any, before there is one), the last such of what she said: the server's judgment,
@@ -138,7 +143,7 @@ Now: finding things
 ` : ""}${opts.playing === "chain" ? `
 Now: a word chain
 - ${chainTurn}
-- Your word: one ${she} knows, beginning with exactly that letter (one with a mark is another letter), not said in this game${used.length ? ` (${used.join(", ")})` : ""}, ending on a letter easy for ${them}, a different one each time. Write it and spell it, then say them: "Fish, f-i-s-h! Yours on h!"
+- Your word: one ${she} knows, beginning with exactly that letter (one with a mark is another letter), not said in this game${used.length ? ` (${used.join(", ")})` : ""}, ending on a letter easy for ${them}, a different one each time. Write it and spell it, then say them: "Fish, f-i-s-h! Yours on h!"${child.language === "ru" || child.language === "uk" ? "\n- A word ending in ь, ъ or ы goes on from the letter before it." : ""}
 - Who gives up loses. If ${she} gives up, give a hint first; if again, ${she} has lost: say so warmly and ask about a new game. You never give up.
 - Every answer while you play: ${routine("chain")}; not once the game is over.
 ` : ""}${opts.playing === "letters" ? `

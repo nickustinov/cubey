@@ -1,5 +1,15 @@
 import { expect, test } from "bun:test";
-import { ageMonths, ageOf, type Child, momentFor, nameOf, parentsOf, pronouns, speakFor } from "./child";
+import { ageMonths, ageOf, type Child, LANGUAGE_NAMES, LANGUAGES, momentFor, nameOf, parentsOf, pronouns, speakFor } from "./child";
+import { LESSON_LANGUAGES } from "./lesson";
+
+test("the languages Cubey speaks: each one Soniox's voice speaks (the word game's list), with its name for the model", () => {
+  expect(LANGUAGES.length).toBe(17);
+  for (const l of LANGUAGES) {
+    expect(LESSON_LANGUAGES).toContain(l);
+    expect(LANGUAGE_NAMES[l]).toBeTruthy();
+  }
+  expect(LANGUAGES.slice(-2)).toEqual(["lv", "lt"]); // last
+});
 
 const anna: Child = { id: "Anna", name: "Anna", ageMonths: 42, timeZone: "Europe/Lisbon", gender: "girl", language: "lv", learns: "en", parents: "mum_dad" };
 const unknown: Child = { id: "child", timeZone: "Europe/Lisbon", language: "lv", learns: "en", parents: "mum_dad" };

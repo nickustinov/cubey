@@ -1,10 +1,12 @@
 // The child Cubey talks to, as it knows them (memory.ts): the server's one child, until a parents' app exists.
-export const LANGUAGES = ["en", "lv", "lt", "fr", "pt", "de", "es", "ru"] as const; // pt: European Portuguese; es: Spain's
+// The languages Cubey speaks, each one Soniox's voice speaks, and the dot font writes (Latin with its marks, Cyrillic).
+export const LANGUAGES = ["en", "fr", "de", "es", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "et", "ru", "uk", "lv", "lt"] as const;
 export type Language = (typeof LANGUAGES)[number];
 // Each language as the model is told to speak it.
 export const LANGUAGE_NAMES: Record<Language, string> = {
-  en: "English", lv: "Latvian", lt: "Lithuanian", fr: "French", pt: "European Portuguese (from Portugal)",
-  de: "German", es: "Spanish (from Spain)", ru: "Russian",
+  en: "English", fr: "French", de: "German", es: "Spanish (from Spain)", it: "Italian", pt: "European Portuguese (from Portugal)",
+  nl: "Dutch", pl: "Polish", sv: "Swedish", da: "Danish", no: "Norwegian (Bokmål)", fi: "Finnish", et: "Estonian",
+  ru: "Russian", uk: "Ukrainian", lv: "Latvian", lt: "Lithuanian",
 };
 export const PARENTS = ["mum_dad", "mum", "dad", "mums", "dads"] as const;
 export type Parents = (typeof PARENTS)[number];
