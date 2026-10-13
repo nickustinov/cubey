@@ -17,7 +17,7 @@ const json = (say: string, extra: object = {}) => JSON.stringify({ say, bye: fal
 // Cubey's talk through a pretend Soniox and pretend models, for a device playing at 16 kHz. answers: what the models
 // write, in turn, either of them (each streamed in three pieces); asked says which was; the word game's translations
 // the model writes by itself.
-async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!")], battery: Battery | null = { percent: 73, charging: false }) {
+async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!")], battery: Battery | null = { percent: 73, charging: false }, child: Child = anna) {
   const texts: any[] = [];
   const exchanges: Exchanged[] = [];
   let audio = 0;
@@ -36,10 +36,11 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     pcm: number; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: unknown; text: string; cancelled: boolean;
     also?: string[]; waitMs?: number;
   }[] = [];
-  const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number; timed: boolean }[] = [];
+  const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number; speed: number; timed: boolean }[] = [];
+  const played: Buffer[] = []; // what the device was sent of Cubey's voice
   let heardNext = "Kāpēc debesis ir zilas?";
   const learned: object[] = [];
-  const brightened: number[] = [];
+  const brightened: number[] = [], turned: number[] = [];
   const logged: string[] = [];
   const deps: CascadeDeps = {
     history: { recent: () => before },
@@ -49,9 +50,9 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
       listeners.push(l);
       return { send: (pcm) => void (l.pcm += pcm.length), finish: async () => l.text, cancel: () => void (l.cancelled = true) };
     },
-    // Asked to, it times what it says as Soniox would: a character every 0.1 s.
-    speak: ({ sampleRate, onAudio, timestamps, onCharacters }) => {
-      const v = { said: [] as string[], languages: [] as (string | undefined)[], cancelled: false, rate: sampleRate, timed: false };
+    // Asked to, it times what it says as Soniox would: a character every 0.1 s. Its sound: a tenth of a second.
+    speak: ({ sampleRate, speed, onAudio, timestamps, onCharacters }) => {
+      const v = { said: [] as string[], languages: [] as (string | undefined)[], cancelled: false, rate: sampleRate, speed, timed: false };
       voices.push(v);
       let at = 0;
       return {
@@ -60,7 +61,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
           if (v.said.length === 1) v.timed = timestamps?.() ?? false; // as its stream opens, with the first text
           if (v.timed) onCharacters?.([...text], [...text].map(() => (at += 0.1) - 0.1));
         },
-        end: async () => onAudio(Buffer.alloc(4)),
+        end: async () => onAudio(Buffer.alloc(sampleRate / 5)),
         cancel: () => void (v.cancelled = true),
       };
     },
@@ -72,7 +73,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   };
   const db = new Database(":memory:");
   deps.lessons = new Lessons({
-    progress: new LessonProgress(db), words: new LessonWords(db), language: () => "en",
+    progress: new LessonProgress(db), words: new LessonWords(db),
     picture: async (name, size) => `png:${name}:${size}`,
     complete: async (opts) => {
       if (!opts.system.startsWith("Translate")) return deps.complete(opts);
@@ -80,11 +81,13 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
       return JSON.stringify(Object.fromEntries(Object.entries(asked).map(([id, en]) => [id, en])));
     },
   });
-  const live = cascadeTalks(deps).open(anna, opened, {
-    rate: 16000, text: (m) => void texts.push(m), audio: () => void audio++, exchange: (e) => void exchanges.push(e), battery: () => battery ?? undefined,
+  let now = child; // as it is kept: what it learns, its brightness and volume, one on another
+  const live = cascadeTalks(deps).open(child, opened, {
+    rate: 16000, text: (m) => void texts.push(m), audio: (pcm) => void (audio++, played.push(pcm)), exchange: (e) => void exchanges.push(e), battery: () => battery ?? undefined,
     spent: (s) => void spent.push(s),
-    learn: (what) => (learned.push(what), { ...anna, ...(what.name && { name: what.name }), ...(what.gender && { gender: what.gender }) }),
-    brighten: (percent) => (brightened.push(percent), { ...anna, brightness: percent }),
+    learn: (what) => (learned.push(what), (now = { ...now, ...(what.name && { name: what.name }), ...(what.gender && { gender: what.gender }), ...(what.learns && { learns: what.learns }) })),
+    brighten: (percent) => (brightened.push(percent), (now = { ...now, brightness: percent })),
+    turn: (percent) => (turned.push(percent), (now = { ...now, volume: percent })),
   });
   await Bun.sleep(5);
   // She says something: the device listens and streams the mic, Soniox hears her pause.
@@ -97,7 +100,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     await Bun.sleep(5);
   };
   const types = () => texts.map((t) => t.type);
-  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, logged };
+  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, turned, logged, played };
 }
 
 test("Cubey's hello: the model is told what happened, in Cubey's prompt with its battery, and its words are spoken as written", async () => {
@@ -112,6 +115,14 @@ test("Cubey's hello: the model is told what happened, in Cubey's prompt with its
   expect(t.audio()).toBe(1);
   expect(t.texts).toEqual([{ type: "said", heard: "", said: "Čau, Anna!", last: false }]);
   expect(t.exchanges).toEqual([{ heard: "(Anna has just woken you.)", said: "Čau, Anna!", forParents: false }]);
+});
+
+// A small robot's voice (2026-10-13): Soniox has no pitch, so its speech is made slower and played back faster.
+test("Cubey's voice a little higher, at its pace: Soniox's slower by a fifth, played back a quarter faster", async () => {
+  const t = await talk();
+  expect(t.voices[0].speed).toBeCloseTo(0.8);
+  const bytes = t.played.reduce((sum, pcm) => sum + pcm.length, 0);
+  expect(bytes / 3200).toBeCloseTo(0.8, 1); // Soniox's tenth of a second, played in 80 ms
 });
 
 test("going on after a lost connection, no hello; what happened instead of her waking it, as the hello", async () => {
@@ -169,6 +180,9 @@ test("its routines: the battery, brushing and its end, a timer, shown on the dev
   expect(t.texts.at(-2)).toEqual({ type: "find" });
   await t.ask("Padari ekrānu tumšāku", json("Labi.", { routine: "brightness", number: 30 }));
   expect(t.brightened).toEqual([30]); // kept, and to the device with its settings (session.ts)
+  await t.ask("Runā skaļāk!", json("Labi!", { routine: "volume", number: 80 }));
+  expect(t.turned).toEqual([80]);
+  expect(t.types().at(-2)).toBe("heard");
   expect(t.types().at(-2)).toBe("heard");
   await t.ask("Atver valodu izvēlni", json("Lūdzu!", { routine: "menu" }));
   expect(t.texts.at(-2)).toEqual({ type: "menu" });
@@ -263,6 +277,19 @@ test("a model that fails, or writes nothing usable: the turn fails, and the devi
   expect(t.texts.at(-1)).toMatchObject({ type: "failed" });
 });
 
+test("a child who hasn't chosen: Cubey asks which language; the one they name is kept, and the word game begins in it", async () => {
+  const t = await talk({}, [json("Čau!")], { percent: 73, charging: false }, { ...anna, learns: undefined });
+  expect(t.asked[0].system).toContain("She hasn't chosen a language to learn yet.");
+  await t.ask("Spēlēsim papagaili!", json("Spēlēsim!", { routine: "lesson" })); // no language: no game yet
+  expect(t.types()).not.toContain("lesson.start");
+  await t.ask("Gribu mācīties", json("Kuru valodu? Angļu, franču vai spāņu?"));
+  await t.ask("Franču!", json("Mācīsimies franču vārdus! Vai esi gatava?", { routine: "lesson", learn: "fr" }));
+  expect(t.learned).toContainEqual({ learns: "fr" });
+  expect(t.types().at(-2)).toBe("lesson.start");
+  await t.ask("Jā!", step("[excited] Klausies: {Bonjour}!"));
+  expect(t.listeners.at(-1)).toMatchObject({ also: ["fr"] }); // Soniox hears French too
+});
+
 // Answers begun at her pause, before her turn ended, were seldom the ones spoken, and cost a third of the model's
 // calls (2026-10-13).
 test("the model is asked once her turn is over, never before: nothing listens for her pauses", async () => {
@@ -283,7 +310,7 @@ async function playing() {
 
 test("she asks to learn English (or says parrot): Cubey says it'll play, and the device hears the word game begin", async () => {
   const t = await talk();
-  expect(t.asked[0].system).toContain("Learning English");
+  expect(t.asked[0].system).toContain("She is learning English with you.");
   expect(t.asked[0].system).toContain('says "parrot"');
   await t.ask("Gribu mācīties angliski", json("Spēlēsim vārdu spēli! Vai esi gatava?", { routine: "lesson" }));
   expect(t.types()).toEqual(["said", "listening", "heard", "lesson.start", "said"]);
@@ -482,7 +509,7 @@ test("what each turn spent, for its Cubey's spending: its model's tokens, her au
   await t.ask("Kāpēc debesis ir zilas?", json("Tāpēc!"));
   expect(t.spent).toContainEqual({ what: "think", model: "talk", input: 100, output: 10 });
   expect(t.spent).toContainEqual({ what: "listen", seconds: 640 / 32000 }); // a frame of her mic
-  expect(t.spent).toContainEqual({ what: "speak", seconds: 4 / 32000 });    // Cubey's pretend sound, at 16 kHz
+  expect(t.spent).toContainEqual({ what: "speak", seconds: 0.1 });          // Cubey's pretend sound, as Soniox made it
 });
 
 test("what she tells Cubey of herself is kept, and the talk goes on with it: call me Nick", async () => {
@@ -539,11 +566,11 @@ test("spelling a word: the server spells it to the device before Cubey speaks, t
   expect(t.texts.slice(-8)).toEqual([
     { type: "heard" },
     { type: "spell", word: "kaķis" },
-    { type: "spell.at", i: 0, ms: 700 },
-    { type: "spell.at", i: 1, ms: 1000 },
-    { type: "spell.at", i: 2, ms: 1300 },
-    { type: "spell.at", i: 3, ms: 1600 },
-    { type: "spell.at", i: 4, ms: 1900 },
+    { type: "spell.at", i: 0, ms: 560 }, // as played: its voice, played back faster (higher)
+    { type: "spell.at", i: 1, ms: 800 },
+    { type: "spell.at", i: 2, ms: 1040 },
+    { type: "spell.at", i: 3, ms: 1280 },
+    { type: "spell.at", i: 4, ms: 1520 },
     { type: "said", heard: "Kā raksta kaķis?", said: "Kaķis: k, a, ķ, i, s. Kaķis!", last: false },
   ]);
   expect(t.logged).toContain("spelled kaķis: 5 of 5 letters timed"); // to see on the board's server whether Soniox's timing finds them

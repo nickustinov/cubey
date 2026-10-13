@@ -21,13 +21,15 @@
 //                     {"type":"lesson.stopped"}         her word game: she stopped it (the button)
 //                     {"type":"dice.rolled", n}         the die landed on n (1–6): Cubey says it, once, nobody
 //                                                       listening (no talk while the die is out)
-//   device -> server: {"type":"settings", language, learns, theme, brightness}   its menu: the language Cubey speaks,
-//                                                       the one it teaches, its screen's theme and brightness
-//                                                       (memory.ts); the talk opens anew in it
-//   server -> device: {"type":"settings", language, learns, languages, new, brightness, theme}   to its hello, and
+//   device -> server: {"type":"settings", language, theme, brightness, volume}   its menu: the language Cubey
+//                                                       speaks, its screen's theme and brightness, its volume (memory.ts); the talk
+//                                                       opens anew in it (the language its word game teaches, the
+//                                                       child chooses by asking Cubey)
+//   server -> device: {"type":"settings", language, languages, new, brightness, volume, theme}   to its hello, and
 //                                                       once they are set: for its menu, with the languages Cubey
 //                                                       speaks; new: not set up yet, its menu opens by itself;
 //                                                       brightness: its screen's, in percent (10–100), a grown-up's;
+//                                                       volume: its speaker's, in percent (10–100);
 //                                                       theme: its screen's colours (its menu, the admin page)
 //   server -> device: {"type":"talk_over", on}          to its hello: whether she may talk over Cubey (CUBEY_TALK_OVER);
 //                                                       off, the mic rests while Cubey speaks and nothing ducks it
@@ -80,13 +82,13 @@ import type { Exchanged } from "./log";
 import type { Learned } from "./memory";
 import type { Spent } from "./prices";
 
-export type Settings = { language: string; learns: string; theme?: string };
+export type Settings = { language: string; theme?: string };
 // new: a new Cubey's, not set up yet; theme: its screen's colours (child.ts)
-export type Known = Settings & { new: boolean; brightness: number; theme: string };
+export type Known = Settings & { new: boolean; brightness: number; volume: number; theme: string };
 export type SessionDeps = {
   child: () => Child;
-  // what the device's menu sets, and the brightness a grown-up asks Cubey for (memory.ts)
-  settings: { get(): Known; set(settings: Settings): boolean; brighten(percent: number): void };
+  // what the device's menu sets, and the brightness and volume asked of Cubey (memory.ts)
+  settings: { get(): Known; set(settings: Settings): boolean; brighten(percent: number): void; turn(percent: number): void };
   cubey: Talks; // through Soniox and a model, or on Gemini Live (server.ts)
   send: { text(msg: object): void; audio(pcm: Buffer): void };
   onExchange?: (exchanged: Exchanged) => void; // for the parents' log and the history
@@ -112,8 +114,8 @@ export class Session {
   onText(raw: string) {
     let msg: {
       type?: unknown; speaker_rate?: unknown; again?: unknown; battery?: unknown; charging?: unknown; part?: unknown; timer?: unknown;
-      for?: unknown; minutes?: unknown; id?: unknown; dice?: unknown; n?: unknown; language?: unknown; learns?: unknown; theme?: unknown;
-      brightness?: unknown;
+      for?: unknown; minutes?: unknown; id?: unknown; dice?: unknown; n?: unknown; language?: unknown; theme?: unknown;
+      brightness?: unknown; volume?: unknown;
     };
     try {
       msg = JSON.parse(raw);
@@ -126,8 +128,9 @@ export class Session {
         this.deps.send.text({ type: "talk_over", on: this.deps.talkOver !== false });
         return this.sendSettings();
       case "settings":
-        if (!this.deps.settings.set({ language: String(msg.language), learns: String(msg.learns), ...(typeof msg.theme === "string" && { theme: msg.theme }) })) return;
+        if (!this.deps.settings.set({ language: String(msg.language), ...(typeof msg.theme === "string" && { theme: msg.theme }) })) return;
         if (typeof msg.brightness === "number") this.deps.settings.brighten(msg.brightness);
+        if (typeof msg.volume === "number") this.deps.settings.turn(msg.volume);
         this.talk?.close(); // in the language before: the device opens it anew
         this.talk = undefined;
         return this.sendSettings();
@@ -179,6 +182,7 @@ export class Session {
       rate: this.rate, text, audio, exchange: (e) => this.deps.onExchange?.(e), battery: () => this.battery, spent: (s) => this.deps.spent?.(s),
       learn: (learned) => this.deps.learn?.(learned) ?? this.deps.child(),
       brighten: (percent) => (this.deps.settings.brighten(percent), this.sendSettings(), this.deps.child()),
+      turn: (percent) => (this.deps.settings.turn(percent), this.sendSettings(), this.deps.child()),
     };
     this.talk = this.deps.cubey.open(this.deps.child(), opened, out);
   }

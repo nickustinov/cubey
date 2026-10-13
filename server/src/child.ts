@@ -17,10 +17,11 @@ export type Theme = (typeof THEMES)[number];
 export type Gender = "girl" | "boy";
 
 // id: theirs for good, for their talks before and their word game's memory (the name they first had); name, gender
-// and age: unknown until they tell Cubey; learns: the language its word game teaches them.
+// and age: unknown until they tell Cubey; learns: the language its word game teaches them, as they chose it (none yet).
 export type Child = {
-  id: string; name?: string; gender?: Gender; ageMonths?: number; language: Language; learns: string; parents: Parents; timeZone: string;
+  id: string; name?: string; gender?: Gender; ageMonths?: number; language: Language; learns?: string; parents: Parents; timeZone: string;
   brightness?: number; // its Cubey's screen's, in percent (none: full)
+  volume?: number; // its Cubey's speaker's, in percent (none: full)
   theme?: Theme; // its Cubey's screen's colours (none: amber)
 };
 

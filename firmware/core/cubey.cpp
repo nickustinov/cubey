@@ -76,6 +76,7 @@ static uint32_t lost_since = 0;         // on a network, no server since (0: it 
 constexpr uint32_t kLostMs = 60000;     // longer than the server takes to restart
 static bool wifi_offered = false;       // since it woke, it opened by itself: not again
 static int brightness_shown = 100;     // the screen's, as last set
+static int volume_shown = 100;         // the speaker's, as last set
 static std::string asked;               // "menu" or "wifi": a grown-up asked Cubey for it, to open once it has spoken
 static uint32_t woke_at = 0;
 constexpr uint32_t kWifiFailedMs = 20000; // the network kept not joined this long after waking: the setup
@@ -246,8 +247,8 @@ static void end_menu() {
     if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
     if (!settings_menu.to_send() || !hal::link_connected()) return;
     char msg[160];
-    snprintf(msg, sizeof msg, R"({"type":"settings","language":"%s","learns":"%s","theme":"%s","brightness":%d})", settings_menu.language().c_str(),
-             settings_menu.learns().c_str(), settings_menu.theme().c_str(), settings_menu.brightness());
+    snprintf(msg, sizeof msg, R"({"type":"settings","language":"%s","theme":"%s","brightness":%d,"volume":%d})", settings_menu.language().c_str(),
+             settings_menu.theme().c_str(), settings_menu.brightness(), settings_menu.volume());
     hal::link_send(msg);
 }
 
@@ -423,8 +424,9 @@ static void server_message(const ServerMessage &msg, const std::string &json, ui
     if (msg.type == "reset") return hal::wipe();
     if (msg.type == "settings") { // to its hello, asleep too
         if (msg.brightness) hal::brightness(brightness_shown = msg.brightness);
+        if (msg.volume) hal::volume(volume_shown = msg.volume);
         if (!msg.theme.empty() && !settings_menu.is_open()) theme(msg.theme);
-        return settings_menu.known(msg.languages, {msg.language, msg.learns, msg.theme, msg.brightness ? msg.brightness : 100}, msg.fresh);
+        return settings_menu.known(msg.languages, {msg.language, msg.theme, msg.brightness ? msg.brightness : 100, msg.volume ? msg.volume : 100}, msg.fresh);
     }
     if (!eyes_shown) return;
     if (msg.type == "menu" || msg.type == "wifi") {
@@ -567,8 +569,9 @@ static void follow_menu(const Keys &keys, uint32_t now) {
     }
     if (menu_shown && !settings_menu.is_open()) return end_menu(); // OK tapped
     if (!menu_shown) return;
-    theme(settings_menu.theme()); // its theme and brightness shown as they are set
+    theme(settings_menu.theme()); // its theme, brightness and volume as they are set
     if (settings_menu.brightness() != brightness_shown) hal::brightness(brightness_shown = settings_menu.brightness());
+    if (settings_menu.volume() != volume_shown) hal::volume(volume_shown = settings_menu.volume());
     menu::show(menu_shown, settings_menu);
 }
 

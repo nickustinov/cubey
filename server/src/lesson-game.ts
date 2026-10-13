@@ -48,14 +48,13 @@ export class Lessons {
     progress: LessonProgress;
     words: LessonWords;
     complete: Complete;
-    language: (child: Child) => string;
     picture: (name: string, size: PictureSize) => Promise<string | undefined>; // base64 PNG
     now?: () => Date;
   }) {}
 
   // The child goes by her name in the memory until the parents' app gives her an id.
-  async start(child: Child, spent?: (spent: Spent) => void): Promise<Game> {
-    const game: Game = { child, spent, language: this.deps.language(child), today: dayOf(child, this.deps.now?.()), plan: [], at: -1, missed: false, words: {}, known: [] };
+  async start(child: Child, language: string, spent?: (spent: Spent) => void): Promise<Game> {
+    const game: Game = { child, spent, language, today: dayOf(child, this.deps.now?.()), plan: [], at: -1, missed: false, words: {}, known: [] };
     await this.plan(game);
     return game;
   }

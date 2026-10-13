@@ -57,15 +57,16 @@ TEST_CASE("something to show on the screen: a picture's rows, or text") {
     CHECK(parse_message(R"({"type":"show","rows":[1,"#"]})").rows == std::vector<std::string>{"#"}); // strings only
 }
 
-TEST_CASE("the languages for the grown-ups' menu: Cubey's, the one it teaches, and all it speaks") {
-    const ServerMessage s = parse_message(R"({"type":"settings","language":"lv","learns":"en","languages":["en","lv","de"]})");
+TEST_CASE("the languages for the grown-ups' menu: Cubey's, and all it speaks") {
+    const ServerMessage s = parse_message(R"({"type":"settings","language":"lv","languages":["en","lv","de"]})");
     CHECK(s.language == "lv");
-    CHECK(s.learns == "en");
     CHECK(s.languages == std::vector<std::string>{"en", "lv", "de"});
     CHECK_FALSE(s.fresh);
-    CHECK(parse_message(R"({"type":"settings","language":"lv","learns":"en","languages":["en"],"new":true})").fresh); // not set up yet
+    CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"new":true})").fresh); // not set up yet
     CHECK(s.brightness == 0); // not said
     CHECK(s.theme.empty()); // not said
-    CHECK(parse_message(R"({"type":"settings","language":"lv","learns":"en","languages":["en"],"theme":"green"})").theme == "green");
-    CHECK(parse_message(R"({"type":"settings","language":"lv","learns":"en","languages":["en"],"brightness":40})").brightness == 40);
+    CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"theme":"green"})").theme == "green");
+    CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"brightness":40})").brightness == 40);
+    CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"volume":60})").volume == 60);
+    CHECK(s.volume == 0); // not said
 }

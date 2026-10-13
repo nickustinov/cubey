@@ -30,7 +30,7 @@ function lessons(complete: Complete) {
   const progress = new LessonProgress(db);
   const pictures: string[] = [];
   const game = new Lessons({
-    progress, words: new LessonWords(db), complete, language: () => "en", now,
+    progress, words: new LessonWords(db), complete, now,
     picture: async (name, size) => (pictures.push(`${name} ${size}`), `png:${name}:${size}`),
   });
   return { game, progress, pictures };
@@ -43,19 +43,19 @@ const quiet = { her: { quiet: true as const }, talk: [] };
 test("a game starts from her memory, with the words in the target language translated once and kept", async () => {
   const { calls, complete } = model();
   const { game: lessons_ } = lessons(complete);
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   expect(game).toMatchObject({ language: "en", today, at: -1 });
   expect(game.plan[0]).toEqual({ kind: "teach", idea: "hello" });
   expect(game.words.hello).toBe("EN hello");
   expect(calls.translate).toBe(1);
-  await lessons_.start(anna);
+  await lessons_.start(anna, "en");
   expect(calls.translate).toBe(1); // kept
 });
 
 test("teaching: the picture over all of the screen, the idea remembered as new, two languages, the parents see it", async () => {
   const { complete } = model();
   const { game: lessons_, progress, pictures } = lessons(complete);
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   const turn = await lessons_.turn(game, said("Jā!"));
   if (turn.stop) throw new Error("stopped");
   expect(turn.show).toEqual({ type: "lesson.show", picture: "png:Waving hand:256" });
@@ -72,7 +72,7 @@ async function tapping(reply?: string) {
   const { game: lessons_, progress } = lessons(complete);
   progress.record("Anna", "en", "cat", "new", "2026-09-28");
   progress.record("Anna", "en", "dog", "new", "2026-09-28");
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   expect(game.plan[0]).toMatchObject({ kind: "review", idea: "cat", how: "touch" });
   const asking = await lessons_.turn(game, said("Jā"));
   if (asking.stop) throw new Error("stopped");
@@ -116,7 +116,7 @@ test("a wrong tap gets one more go at the same pictures; right then is a try; wr
 test("she says nothing: the same step once more, nothing judged; never a goodbye, however long", async () => {
   const { calls, complete } = model();
   const { game: lessons_ } = lessons(complete);
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   await lessons_.turn(game, said("Jā"));
   for (let i = 0; i < 5; i++) {
     const turn = await lessons_.turn(game, quiet);
@@ -132,7 +132,7 @@ test("she says nothing: the same step once more, nothing judged; never a goodbye
 test("she wants to stop: the game says so and changes nothing", async () => {
   const { complete } = model('{"say":"","stop":true}');
   const { game: lessons_, progress } = lessons(complete);
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   expect(await lessons_.turn(game, said("Negribu vairs"))).toEqual({ stop: true, forParents: false });
   expect(game.at).toBe(-1);
   expect(progress.memory("Anna", "en", today).seen).toEqual([]);
@@ -141,7 +141,7 @@ test("she wants to stop: the game says so and changes nothing", async () => {
 test("no count: past its planned steps it plans the next round from her memory as it is by then, with new words", async () => {
   const { calls, complete } = model();
   const { game: lessons_ } = lessons(complete);
-  const game = await lessons_.start(anna);
+  const game = await lessons_.start(anna, "en");
   const taught = () => game.plan.filter((s) => s.kind === "teach").map((s) => s.idea);
   const first = taught();
   for (let i = 0; i <= LESSON_ROUND; i++) await lessons_.turn(game, said("Jā"));

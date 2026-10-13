@@ -31,6 +31,7 @@ bool voice_over_speech();
 int speaker_rate();  // Hz, announced to the server
 bool speaker_busy(); // speech queued or playing
 void speaker_stop(); // drop queued speech
+void volume(int percent); // the speaker's, 10 to 100: a grown-up's (kept while the codecs rest)
 
 // Power: the battery's charge, the side power button's last press since the last call (None: none), the screen
 // (asleep, the core also draws black) and its brightness in percent (kept while it sleeps).

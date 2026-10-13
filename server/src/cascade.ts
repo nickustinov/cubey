@@ -16,12 +16,17 @@ import type { Game, Lessons } from "./lesson-game";
 import type { Complete, Message } from "./llm";
 import type { Learned } from "./memory";
 import type { Spent } from "./prices";
+import { Resampler } from "./resample";
 import { wordsOf } from "./soniox";
 import { SpokenLetters } from "./spelling";
 import { type Opened, routineMessage, type Talk, type TalkOut, type Talks } from "./talk";
 
 export const VOICE = "Russell"; // a Soniox voice (Daniel, Sebastian and Russell tried on 2026-10-10); it takes the cues in Cubey's words (cubey.ts)
 const SPEED = 1.0; // Soniox allows 0.7 to 1.3; Russell at its own pace (1.1 until 2026-10-10)
+// Its voice four semitones higher, as a small robot's (2026-10-13; a ring modulator, a tin can and an old game's crush
+// were tried too): Soniox has no pitch, so it speaks slower by as much, and its speech is played back faster, its pace as
+// before (resample.ts), a fraction of a millisecond later.
+const PITCH = 1.25;
 const MIC_BYTES_PER_SECOND = 16000 * 2; // the device's mic: 16 kHz, 16-bit
 const TALK_MOST = 16; // messages of this talk the model is given: its last exchanges (the ones before are history)
 const LESSON_TALK = 6; // of the word game: its last steps, so the model keeps to this one
@@ -278,7 +283,7 @@ class CascadeTalk implements Talk {
   private prompt(asked: string) {
     const battery = this.out.battery();
     const earlier = earlierBlock(this.deps.history.recent(this.child.id), nameOf(this.child));
-    const lesson = languageName(this.deps.lessons.deps.language(this.child));
+    const lesson = this.child.learns ? languageName(this.child.learns) : undefined;
     const system = cubeyPrompt(this.child, {
       earlier, now: new Date(), mode: "cascade", battery, lesson, playing: this.playing, needed: this.letter, heard: asked, used: this.used, dots: this.dots, screen: this.screen(),
     });
@@ -361,11 +366,15 @@ class CascadeTalk implements Talk {
       this.letter = letter ?? (playing === this.playing ? this.letter : undefined);
       this.dots = playing === "count" ? (answer.number ?? this.dots) : undefined;
       this.playing = playing;
-      const message = routine && routineMessage(routine, { ...answer, letter, number: dots }, battery);
-      if (message && !(routine === "chain" && shown)) this.out.text(message);
-      if (routine === "lesson") this.startLesson();
-      if (routine === "brightness" && answer.number) this.child = this.out.brighten(answer.number);
+      // What the child told it first: the language they chose is the word game's. No language chosen, no game: Cubey
+      // asks which.
       if (answer.learned) this.child = this.out.learn(answer.learned);
+      const learns = routine === "lesson" ? this.child.learns : undefined;
+      const message = routine && (routine !== "lesson" || learns) && routineMessage(routine, { ...answer, letter, number: dots }, battery);
+      if (message && !(routine === "chain" && shown)) this.out.text(message);
+      if (learns) this.startLesson(learns);
+      if (routine === "brightness" && answer.number) this.child = this.out.brighten(answer.number);
+      if (routine === "volume" && answer.number) this.child = this.out.turn(answer.number);
       if (!spoken.trim()) said = said.then(() => voice.say(answer.said)); // none of it came as it was written
       await said;
       await voice.end();
@@ -384,28 +393,33 @@ class CascadeTalk implements Talk {
     }
   }
 
-  // Cubey's voice for an answer: its sound goes to the device while the answer is still the talk's (generation); timed,
-  // what it says as it times it (a word it spells).
+  // Cubey's voice for an answer, higher (PITCH): its sound goes to the device while the answer is still the talk's
+  // (generation); timed, what it says as it times it (a word it spells), as it plays.
   private speaking(generation: number, onSound = () => {}, timed: Pick<Parameters<CascadeDeps["speak"]>[0], "timestamps" | "onCharacters"> = {}): Voice {
     this.saying = new Set();
+    const higher = new Resampler(Math.round(this.out.rate * PITCH), this.out.rate);
+    const { onCharacters } = timed;
     return (this.speech = this.deps.speak({
       ...timed,
-      voice: VOICE, speed: SPEED, language: this.child.language, sampleRate: this.out.rate,
+      ...(onCharacters && { onCharacters: (characters: string[], seconds: number[]) => onCharacters(characters, seconds.map((at) => at / PITCH)) }),
+      voice: VOICE, speed: SPEED / PITCH, language: this.child.language, sampleRate: this.out.rate,
       onAudio: (pcm) => {
-        this.spoken += pcm.length; // made, if no longer wanted
+        this.spoken += pcm.length; // made (and paid for), if no longer wanted
         if (generation !== this.generation) return;
+        const played = higher.push(pcm);
+        if (!played.length) return;
         onSound();
-        this.out.audio(pcm);
+        this.out.audio(played);
       },
     }));
   }
 
-  // Her word game begins (Cubey has said so): it is planned while that plays, and her next words are the game's.
-  private startLesson() {
-    const lessons = this.deps.lessons;
-    const game = lessons.start(this.child, this.spent);
+  // Her word game begins in the language she chose (Cubey has said so): it is planned while that plays, and her next
+  // words are the game's.
+  private startLesson(language: string) {
+    const game = this.deps.lessons.start(this.child, language, this.spent);
     game.catch(() => {}); // its first turn plans it again
-    this.lesson = { game, language: lessons.deps.language(this.child), talk: [], nudged: false };
+    this.lesson = { game, language, talk: [], nudged: false };
   }
 
   private endLesson() {
@@ -420,7 +434,7 @@ class CascadeTalk implements Talk {
     const lesson = this.lesson!;
     lesson.nudged = "quiet" in her;
     try {
-      const game = await lesson.game.catch(() => (lesson.game = this.deps.lessons.start(this.child, this.spent)));
+      const game = await lesson.game.catch(() => (lesson.game = this.deps.lessons.start(this.child, lesson.language, this.spent)));
       const turn = await this.deps.lessons.turn(game, { her, talk: lesson.talk.slice(-LESSON_TALK) });
       if (generation !== this.generation) return;
       if (turn.stop) {

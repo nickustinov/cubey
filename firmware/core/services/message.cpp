@@ -16,8 +16,8 @@ ServerMessage parse_message(const std::string &json) {
         return cJSON_IsNumber(item) && cJSON_GetNumberValue(item) > 0 ? static_cast<int>(cJSON_GetNumberValue(item)) : 0;
     };
     ServerMessage out{type ? type : "", cJSON_IsTrue(cJSON_GetObjectItem(msg, "last")) != 0, positive("minutes"), kind ? kind : "", letter ? letter : "", word ? word : "",
-                      hers ? hers : "", cJSON_IsTrue(cJSON_GetObjectItem(msg, "on")) != 0, positive("n"), {}, "", "", "", {}, cJSON_IsTrue(cJSON_GetObjectItem(msg, "new")) != 0,
-                      positive("brightness"), ""};
+                      hers ? hers : "", cJSON_IsTrue(cJSON_GetObjectItem(msg, "on")) != 0, positive("n"), {}, "", "", {}, cJSON_IsTrue(cJSON_GetObjectItem(msg, "new")) != 0,
+                      positive("brightness"), positive("volume"), ""};
     const auto whole = [msg](const char *name) {
         const cJSON *item = cJSON_GetObjectItem(msg, name);
         return cJSON_IsNumber(item) && cJSON_GetNumberValue(item) >= 0 ? static_cast<int>(cJSON_GetNumberValue(item)) : -1;
@@ -26,7 +26,6 @@ ServerMessage parse_message(const std::string &json) {
     out.ms = whole("ms");
     if (const char *text = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "text"))) out.text = text;
     if (const char *language = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "language"))) out.language = language;
-    if (const char *learns = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "learns"))) out.learns = learns;
     if (const char *theme = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "theme"))) out.theme = theme;
     const cJSON *item = nullptr;
     cJSON_ArrayForEach(item, cJSON_GetObjectItem(msg, "rows")) if (cJSON_IsString(item)) out.rows.emplace_back(item->valuestring);

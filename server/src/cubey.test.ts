@@ -118,14 +118,26 @@ test("a cue of two words goes to the voice whole, never cut in two", () => {
   expect(words).toEqual(["[long pause] ", "Nu, ", "[warm] ", "labi."]);
 });
 
-test("her word game: asked to learn the language (or the code word, parrot), Cubey sets the lesson routine; not on Gemini Live", () => {
+test("her word game: asked to learn a language (or the code word, parrot), Cubey sets the lesson routine, in hers or another she names; not on Gemini Live", () => {
   const prompt = cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade", lesson: "English" });
-  expect(prompt).toContain("Learning English");
+  expect(prompt).toContain("Learning a language");
+  expect(prompt).toContain("She is learning English with you.");
   expect(prompt).toContain('says "parrot"');
-  expect(prompt).toContain('set routine to "lesson"');
+  expect(prompt).toContain('for English, set routine to "lesson"; for another, set routine to "lesson" with learn to its code ("fr")');
+  expect(prompt).toContain('"learn": ""');
   expect(readAnswer(JSON.stringify({ say: "Spēlēsim!", routine: "lesson" }))?.routine).toBe("lesson");
-  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "live", lesson: "English" })).not.toContain("Learning English");
-  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).not.toContain("Learning");
+  expect(readAnswer(JSON.stringify({ say: "Franču!", routine: "lesson", learn: " FR " }))?.learned).toEqual({ learns: "fr" });
+  expect(readAnswer(JSON.stringify({ say: "Labi!", learn: "French" }))?.learned).toBeUndefined(); // a code only
+  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "live", lesson: "English" })).not.toContain("Learning a language");
+});
+
+test("a child who hasn't chosen a language to learn: Cubey asks which, with a few ideas but theirs, and sets it once they say", () => {
+  const prompt = cubeyPrompt({ ...anna, learns: undefined }, { earlier: "", now: evening, mode: "cascade" });
+  expect(prompt).toContain("She hasn't chosen a language to learn yet.");
+  expect(prompt).toContain('if she said which, set routine to "lesson" with learn to its code ("fr"); if not, ask which language she would like to learn (English, French or Spanish, or another)');
+  expect(prompt).toContain("Any language but Latvian, which she speaks already.");
+  const english = cubeyPrompt({ ...anna, learns: undefined, language: "en" }, { earlier: "", now: evening, mode: "cascade" });
+  expect(english).toContain("(French, Spanish or German, or another)");
 });
 
 test("the dice: a word or two as it rolls, each number said gladly with no question; put away with the button", () => {
@@ -148,6 +160,17 @@ test("for grown-ups, by voice: the screen's brightness (10 to 100%), its menu (l
   expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness", number: 250 }))?.number).toBe(100);
   expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "brightness" }))?.number).toBeUndefined();
   expect(readAnswer(JSON.stringify({ say: "Lūdzu!", routine: "menu" }))?.routine).toBe("menu");
+  expect(prompt).toContain("Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume.");
+});
+
+test("by voice, its volume (10 to 100%), as its brightness", () => {
+  const prompt = cubeyPrompt({ ...anna, volume: 70 }, { earlier: "", now: evening, mode: "cascade" });
+  expect(prompt).toContain("Your volume is 70%. When asked to be louder or quieter, or a percent, in any words,");
+  expect(prompt).toContain('set routine to "volume" with number to the new percent (10 to 100)');
+  expect(cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" })).toContain("Your volume is 100%");
+  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 40 }))).toMatchObject({ routine: "volume", number: 40 });
+  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 2 }))?.number).toBe(10); // as quiet as it goes
+  expect(readAnswer(JSON.stringify({ say: "Labi!", routine: "volume", number: 300 }))?.number).toBe(100);
   expect(readAnswer(JSON.stringify({ say: "Lūdzu!", routine: "wifi" }))?.routine).toBe("wifi");
 });
 

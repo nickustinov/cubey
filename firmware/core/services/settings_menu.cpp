@@ -35,27 +35,37 @@ SettingsMenu::Event SettingsMenu::open(uint32_t now) { return opening(now, false
 
 SettingsMenu::Event SettingsMenu::opening(uint32_t now, bool first) {
     if (languages_.empty() || open_) return Event::None;
-    open_ = true, first_ = first, last_ = now;
+    open_ = true, first_ = first, last_ = now, page_ = 0;
     return Event::Opened;
 }
 
 void SettingsMenu::step(int line, int by, uint32_t now) {
-    const std::vector<std::string> &all = line == 2 ? themes_ : languages_;
-    if (!open_ || line < 0 || line > 2 || all.empty()) return;
+    const std::vector<std::string> &all = line == 1 ? themes_ : languages_;
+    if (!open_ || line < 0 || line > 1 || all.empty()) return;
     last_ = now;
-    std::string *lines[3] = {&shown_.language, &shown_.learns, &shown_.theme};
+    std::string &shown = line == 0 ? shown_.language : shown_.theme;
     const int n = static_cast<int>(all.size());
-    auto at = std::find(all.begin(), all.end(), *lines[line]);
-    int i = at == all.end() ? 0 : static_cast<int>(at - all.begin());
-    do i = (i + by + n) % n;
-    while (line < 2 && all[i] == *lines[1 - line] && n > 1);
-    *lines[line] = all[i];
+    const auto at = std::find(all.begin(), all.end(), shown);
+    const int i = at == all.end() ? 0 : static_cast<int>(at - all.begin());
+    shown = all[(i + by + n) % n];
 }
 
 void SettingsMenu::brighten(int percent, uint32_t now) {
     if (!open_) return;
     last_ = now;
     shown_.brightness = std::clamp((percent + 5) / 10 * 10, 10, 100);
+}
+
+void SettingsMenu::set_volume(int percent, uint32_t now) {
+    if (!open_) return;
+    last_ = now;
+    shown_.volume = std::clamp((percent + 5) / 10 * 10, 10, 100);
+}
+
+void SettingsMenu::to_page(int page, uint32_t now) {
+    if (!open_ || page < 0 || page > 1) return;
+    last_ = now;
+    page_ = page;
 }
 
 SettingsMenu::Event SettingsMenu::close() {

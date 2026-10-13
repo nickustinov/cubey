@@ -15,16 +15,18 @@ struct Keys {
 
 // The grown-ups' menu, hidden from the child: "–" held alone kHoldMs opens it, and again closes it ("+" held alone
 // kHoldMs, the menu closed, is the Wi-Fi setup's: services/wifi_setup.h); so does a grown-up asking Cubey (open()). A
-// new Cubey's opens by itself, once, as the server first says its languages (offer()). On it, three lines: the language
-// Cubey speaks, the one its word game teaches (codes from the server's list) and its screen's theme (its own list); an
-// arrow beside one, tapped, steps it back or on, round (a language past the other line's: never the same); under them
-// its screen's brightness, slid. OK closes it (as do "–" held again, the power button, a minute left alone); what it
-// shows then goes to the server if it changed, or the Cubey is new (to_send()).
-// What it sets: the language Cubey speaks, the one it teaches, its screen's theme and brightness (10 to 100%).
+// new Cubey's opens by itself, once, as the server first says its languages (offer()). Two pages: on the first, the
+// language Cubey speaks (a code from the server's list) and its screen's theme (its own list), an arrow beside each,
+// tapped, stepping it back or on, round; on the second, its screen's brightness and its volume, slid. OK closes it (as do "–" held again, the power button,
+// a minute left alone); what it shows then goes to the server if it changed, or the Cubey is new (to_send()). The
+// language its word game teaches the child chooses by asking Cubey.
+// What it sets: the language Cubey speaks, its screen's theme and brightness, and its volume (10 to 100%).
 struct Settings {
-    std::string language, learns, theme;
-    int brightness = 100;
-    bool operator==(const Settings &o) const { return language == o.language && learns == o.learns && theme == o.theme && brightness == o.brightness; }
+    std::string language, theme;
+    int brightness = 100, volume = 100;
+    bool operator==(const Settings &o) const {
+        return language == o.language && theme == o.theme && brightness == o.brightness && volume == o.volume;
+    }
     bool operator!=(const Settings &o) const { return !(*this == o); }
 };
 
@@ -41,17 +43,20 @@ public:
     Event keys(const Keys &keys, uint32_t now);        // the keys as the platform reads them: call every step
     Event offer(uint32_t now);                         // a new Cubey's: opened, once
     Event open(uint32_t now);                          // asked for: a grown-up asked Cubey
-    void step(int line, int by, uint32_t now);         // an arrow: line 0, 1 or 2
+    void step(int line, int by, uint32_t now);         // an arrow: line 0 (its language) or 1 (its theme)
     void brighten(int percent, uint32_t now);          // the brightness slid to
+    void set_volume(int percent, uint32_t now);        // the volume slid to
+    void to_page(int page, uint32_t now);              // 0: its language and theme; 1: its brightness and volume
     Event confirm() { return close(); }                // OK
     Event close();                                     // the power button
 
     bool is_open() const { return open_; }
-    bool first() const { return first_; } // a new Cubey's, opened by itself: only its languages (ui/menu.h)
+    bool first() const { return first_; } // a new Cubey's, opened by itself: only its language (ui/menu.h)
     const std::string &language() const { return shown_.language; }
-    const std::string &learns() const { return shown_.learns; }
     const std::string &theme() const { return shown_.theme; }
     int brightness() const { return shown_.brightness; }
+    int volume() const { return shown_.volume; }
+    int page() const { return page_; }
     bool to_send() const { return fresh_ || shown_ != known_; }
 
 private:
@@ -59,6 +64,7 @@ private:
     Settings known_, shown_;
     Event opening(uint32_t now, bool first);
     bool open_ = false, fresh_ = false, offered_ = false, first_ = false;
+    int page_ = 0;
     bool plus_ = false, minus_ = false; // held at the last call
     uint32_t held_since_ = 0;           // the key held alone, since
     bool fired_ = false;                // this hold has done what it does

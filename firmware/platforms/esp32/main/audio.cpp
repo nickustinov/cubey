@@ -41,6 +41,7 @@ esp_codec_dev_handle_t speaker = nullptr;
 esp_codec_dev_handle_t mic = nullptr;
 std::mutex codec_mu; // the codecs open or close only between mic reads
 std::atomic<bool> codecs_open{false}; // changed under codec_mu
+std::atomic<int> out_volume{cubey::board::kSpeakerVolume}; // the codec's, as the server last said, set as the codecs open
 TaskHandle_t speaker_handle = nullptr;
 TaskHandle_t mic_handle = nullptr;
 
@@ -138,7 +139,7 @@ bool resume_audio() {
         cubey::board::audio_performance(false);
         return false;
     }
-    esp_codec_dev_set_out_vol(speaker, cubey::board::kSpeakerVolume);
+    esp_codec_dev_set_out_vol(speaker, out_volume);
     if (cubey::board::kEchoReference) { // ES7210 gains by its inputs: the mic is MIC1 (as Lapsa's while quiet), the echo MIC3
         esp_codec_dev_set_in_channel_gain(mic, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(0), cubey::board::kMicGainDb);
         esp_codec_dev_set_in_channel_gain(mic, ESP_CODEC_DEV_MAKE_CHANNEL_MASK(2), cubey::board::kEchoGainDb);
@@ -379,6 +380,12 @@ int speaker_rate() { return kRate; }
 bool speaker_busy() {
     std::lock_guard<std::mutex> lock(mu);
     return speech.samples() > 0 || playing;
+}
+
+void volume(int percent) {
+    std::lock_guard<std::mutex> lock(codec_mu);
+    out_volume = percent;
+    if (codecs_open) esp_codec_dev_set_out_vol(speaker, percent);
 }
 
 void speaker_stop() {

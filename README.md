@@ -63,7 +63,7 @@ Now and then, when it fits, Cubey offers something it can do, as a question ("Sh
 | "How do you write 'cat'?", "Let's spell words" | Cubey says the word and spells it letter by letter: each letter lights up big on the screen the moment Cubey says it, then the whole word passes. In the game, Cubey then asks for the next word |
 | "Let's count", "Play how many dots" | 1 to 10 dots show on the screen to count: few at first, more once the child counts easily |
 | "Draw me a cat", "What's 12 plus 34?" | Cubey draws a picture or writes the sum on its screen for a few seconds; while it draws, faint dots come and go on the screen like a sketch forming. Now and then it draws something by itself, as a surprise |
-| "I want to learn English", "Parrot" | The word game: picture cards fill the screen and Cubey teaches words of the language it teaches, step by step. The child answers by saying the word or tapping the right picture. It goes on from where they stopped last time, and ends when they want to stop or ask for something else |
+| "I want to learn English", "Parrot", "Let's learn French instead" | The word game: picture cards fill the screen and Cubey teaches words of the language the child chose, step by step. Asked the first time, Cubey asks which language (any of 60), remembers it, and switches when the child asks for another; each language keeps its own progress. The child answers by saying the word or tapping the right picture. It goes on from where they stopped last time, and ends when they want to stop or ask for something else |
 
 Saying something unrelated while a game with letters, dots or spelling is on ends that game.
 
@@ -72,6 +72,7 @@ Saying something unrelated while a game with letters, dots or spelling is on end
 | Say | What happens |
 | --- | --- |
 | "Make your screen brighter", "Dimmer", "Set the brightness to 40%" | The screen's brightness changes (10–100%) |
+| "Louder", "Quieter", "Set the volume to 50%" | Cubey's volume changes (10–100%), heard as it answers |
 | "Open your menu", "Change your language", "Change your colours" | The grown-ups' menu opens on the screen |
 | "Set up your Wi-Fi" | The Wi-Fi setup opens on the screen |
 
@@ -86,7 +87,7 @@ Cubey doesn't answer these. It says warmly that they are great questions for the
 | Press the power button while it's asleep | Cubey wakes with a hello that goes on from their last talk |
 | Press the power button while it's awake | A step back: from a routine (brushing, a timer, the dice, the word game, a drawing) to Cubey's eyes, and from its eyes to sleep |
 | Hold the power button (2 s) | Sleep |
-| Hold "–" for 5 s | The grown-ups' menu: the language Cubey speaks, the language it teaches, the screen's theme (amber, green, red, blue, VFD, white) and its brightness. Tap the arrows beside a line to change it, slide the brightness, OK to save |
+| Hold "–" for 5 s | The grown-ups' menu, in two pages: the language Cubey speaks and the screen's theme (amber, green, red, blue, VFD, white); then the screen's brightness and Cubey's volume. Tap the arrows beside a line to change it, slide a slider, tap the page dots to turn the page, OK to save |
 | Hold "+" for 5 s | The Wi-Fi setup: the networks around, tap one, type the password on a keyboard of dots |
 | Tap the screen | Starts brushing, picks a picture in the word game, rolls the dice again |
 | Shake the cube | Rolls the dice again |
@@ -188,7 +189,7 @@ After changing `sdkconfig.local`, delete `firmware/platforms/esp32/sdkconfig` so
 
 ### A new cube's first start
 
-A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick a network, type the password. The server meets it for the first time, keeps its key, and opens its language menu: the language Cubey speaks and the one it teaches. Then Cubey introduces itself and asks the child's name. Every cube runs the same firmware; each has its own child, history and parents' log on the server.
+A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick a network, type the password. The server meets it for the first time, keeps its key, and opens its language menu: the language Cubey speaks. Then Cubey introduces itself and asks the child's name. Every cube runs the same firmware; each has its own child, history and parents' log on the server.
 
 ## The admin page
 
@@ -197,7 +198,7 @@ A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick 
 - the models Cubey thinks with, a dropdown for each job (talk, games, drawing), used from the next turn; a model whose provider key isn't set is greyed out
 - every Cubey, its child, whether it's online, and what it cost today, this month and in all
 - a Cubey's talks, word for word, with the big questions marked
-- its child's name, age and languages, its theme and brightness, its name, blocking it
+- its child's name, age and languages, its theme, brightness and volume, its name, blocking it
 - a full reset, which wipes a Cubey on the server and, if it's on, the cube itself
 - where the money goes: by day, by Cubey and by kind (listening, speaking, each model)
 

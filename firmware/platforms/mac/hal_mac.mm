@@ -274,4 +274,6 @@ Gravity gravity() {
 void screen(bool) {} // no backlight: the core's black is the screen off
 void brightness(int) {} // ponytail: a window doesn't dim; the board's panel does
 
+void volume(int percent) { engine.mainMixerNode.outputVolume = static_cast<float>(percent) / 100; }
+
 } // namespace cubey::hal

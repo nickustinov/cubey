@@ -28,7 +28,9 @@ export function wordOn(heard: string, letter?: string): string | undefined {
   return herWords(heard).filter((w) => !letter || w[0] === letter).at(-1)?.join("");
 }
 
-// lesson: the language Cubey's word game teaches (cascade only); playing: the game she plays now (cascade only), with
+const IDEAS: [string, string][] = [["en", "English"], ["fr", "French"], ["es", "Spanish"], ["de", "German"]];
+
+// lesson: the language Cubey's word game teaches, as the child chose it (cascade only; none yet: Cubey asks which); playing: the game she plays now (cascade only), with
 // needed, the letter she was asked for, heard, what she said (spelled and judged by the server in a game with
 // letters), and used, the words said in this word chain (spelled), none to be said again; dots, how many show in
 // how many dots; screen, what it has drawn shows on its screen (cascade only), its eyes if nothing. What changes turn by
@@ -61,6 +63,9 @@ export function cubeyPrompt(
     ? `${She} said ${herWord}, but it was said already: tell ${them} kindly and give a hint for a new word on "${needed}"; no word of yours.`
     : `${She} needed a word on "${needed}" and said ${spelledOut(words) || "nothing"}: if ${she} meant a word, say kindly which letter it begins with and give a hint; if ${she} said something else, answer that. No word of yours.`;
   const on = needed ? words.filter((w) => w[0] === needed) : words, off = words.filter((w) => !on.includes(w));
+  // A few languages to learn, for a child who doesn't know their names: not the one they speak.
+  const offered = IDEAS.filter(([code]) => code !== child.language).slice(0, 3).map(([, name]) => name);
+  const ideas = `${offered.slice(0, -1).join(", ")} or ${offered.at(-1)}`;
   const battery = opts.battery
     ? `Your battery has ${opts.battery.percent}% left${opts.battery.charging ? ", and is charging" : ""}.`
     : "You can't tell your battery now.";
@@ -101,7 +106,8 @@ Timers
 
 ${live ? "" : `For grown-ups
 - Your screen's brightness is ${child.brightness ?? 100}%. When asked to make it brighter or dimmer, or a percent, in any words, ${routine("brightness")} with number to the new percent (10 to 100), and say so in a few words.
-- Your menu has your languages (the one you speak, the one you teach), your screen's theme (its colours) and its brightness. When asked for it, your settings or any of these, or for your Wi-Fi, in any words, ${routine("menu")} or ${routine("wifi")}, and say in a few words that it opens on your screen: you don't listen until it is closed.
+- Your volume is ${child.volume ?? 100}%. When asked to be louder or quieter, or a percent, in any words, ${routine("volume")} with number to the new percent (10 to 100), and say so in a few words.
+- Your menu has the language you speak, your screen's theme (its colours) and brightness, and your volume. When asked for it, your settings or any of these, or for your Wi-Fi, in any words, ${routine("menu")} or ${routine("wifi")}, and say in a few words that it opens on your screen: you don't listen until it is closed.
 
 Dice
 - When ${she} or anyone wants to roll a die or the dice (for a board game), in any words, ${routine("dice")} and say only a word or two ("Here goes!"): a die rolls on your screen. While it is out you don't listen; shaking or tapping you rolls it again, and you hear each number in brackets. The button puts it away.
@@ -116,10 +122,13 @@ Games
 - How many dots: when ${she} wants to count, or play how many dots, in any words, ${routine("count")} with number to how many dots (1 to 10): they show on your screen, and you ask how many ${she} sees.
 - Spelling words: when ${she} wants to know how a word is written or spelled, or to play spelling words, in any words, ${routine("spell")} and spell to the word, as it is written; say it, then its letters, each alone, then the word again ("Cat: c, a, t. Cat!"): they light up big on your screen as you say them.
 
-`}${opts.lesson && !live ? `Learning ${opts.lesson}
-- When ${she} wants to learn ${opts.lesson} or another language, or says "parrot" (in any language: it is your ${opts.lesson} game's name), in any words, ${routine("lesson")}: say in a sentence, warmly, that you'll learn ${opts.lesson} words together, and ask whether ${she} is ready. Then you teach ${them}, a step at a time, until ${she} wants to stop.
+`}${live ? "" : `Learning a language
+- ${opts.lesson ? `${She} is learning ${opts.lesson} with you.` : `${She} hasn't chosen a language to learn yet.`} When ${she} wants to learn a language, or says "parrot" (in any language: it is your language game's name), in any words: ${opts.lesson
+    ? `for ${opts.lesson}, ${routine("lesson")}; for another, ${routine("lesson")} with learn to its code ("fr")`
+    : `if ${she} said which, ${routine("lesson")} with learn to its code ("fr"); if not, ask which language ${she} would like to learn (${ideas}, or another), and set it once ${she} says`}. Then say in a sentence, warmly, that you'll learn its words together, and ask whether ${she} is ready; you teach ${them} a step at a time, until ${she} wants to stop.
+- Any language but ${LANGUAGE_NAMES[child.language]}, which ${she} speaks already.
 
-` : ""}Goodbye
+`}Goodbye
 - When ${she} says goodbye or wants to stop talking, in any words, say a short warm goodbye with no question, and ${set("bye")}: you sleep then, until ${she} wakes you.
 
 Questions for ${parents}
@@ -166,12 +175,12 @@ Answer with JSON only: ${opts.playing === "chain"
     ? fresh || !needed
       ? `{"hers": "<her word as she meant it, or \"\">", "word": "<your word, or \"\">", "spelled": "<your word, letter by letter>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
       : `{"word": "", "hint": "<the word your hint is for>", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "chain", "minutes": 0, "for": "", "letter": ""}`
-    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "child": {}}`}`}`;
+    : `{"show": "<what you draw or write now, in English, or \"\">", "spell": "<the word you spell now, or \"\">", "say": "<what you say>", "bye": false, "for_parents": false, "routine": "", "minutes": 0, "for": "", "letter": "", "word": "", "number": 0, "child": {}, "learn": ""}`}`}`;
 }
 
 // Its answer, as the model wrote it (cascade.ts): its words, a goodbye, a question for her parents, a routine with
 // what it needs; or the words already spoken if the rest is unusable; nothing without either.
-export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "menu", "wifi"] as const;
+export const ROUTINES = ["battery", "brushing", "stop_brushing", "timer", "lesson", "dice", "find", "chain", "letters", "count", "spell", "brightness", "volume", "menu", "wifi"] as const;
 export type Routine = (typeof ROUTINES)[number];
 export type Answer = { said: string; bye: boolean; forParents: boolean; routine?: Routine; minutes?: number; for?: TimerFor; letter?: string; word?: string; hers?: string; number?: number; show?: string; learned?: Learned };
 
@@ -193,6 +202,12 @@ function learnedOf(written: unknown): Learned | undefined {
   };
   return Object.keys(learned).length ? learned : undefined;
 }
+
+// The language the child wants to learn, as the model wrote it: a code ("fr"); none for anything else.
+const learnsOf = (written: unknown) => {
+  const code = typeof written === "string" ? written.trim().toLowerCase() : "";
+  return /^[a-z]{2,3}$/.test(code) ? code : undefined;
+};
 
 // How many dots, 1 to 10, as the model wrote it; none for anything else.
 const dotsOf = (written: unknown) => {
@@ -237,7 +252,8 @@ export function readAnswer(raw: string, spoken = ""): Answer | undefined {
   try {
     const json = JSON.parse(raw.slice(raw.indexOf("{"), raw.lastIndexOf("}") + 1));
     if (typeof json.say === "string" && json.say.trim()) {
-      const learned = learnedOf(json.child);
+      const told = learnedOf(json.child), learns = learnsOf(json.learn);
+      const learned: Learned | undefined = told || learns ? { ...told, ...(learns && { learns }) } : undefined;
       const answer: Answer = {
         said: json.say.trim(), bye: json.bye === true, forParents: json.for_parents === true, ...(textOf(json.show) ? { show: textOf(json.show) } : {}),
         ...(learned && { learned }),
@@ -253,7 +269,7 @@ export function readAnswer(raw: string, spoken = ""): Answer | undefined {
         ...(json.routine === "timer" ? { minutes: Number(json.minutes), for: TIMER_FOR.includes(json.for) ? json.for : "other" } : {}),
         ...(json.routine === "letters" && letterOf(json.letter) ? { letter: letterOf(json.letter) } : {}),
         ...(json.routine === "count" && dotsOf(json.number) ? { number: dotsOf(json.number) } : {}),
-        ...(json.routine === "brightness" && Number.isFinite(json.number) ? { number: Math.min(100, Math.max(10, Math.round(json.number))) } : {}),
+        ...((json.routine === "brightness" || json.routine === "volume") && Number.isFinite(json.number) ? { number: Math.min(100, Math.max(10, Math.round(json.number))) } : {}),
         ...(chained ? { letter: chained, word } : {}),
         ...(hers ? { hers } : {}),
       };

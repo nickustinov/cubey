@@ -8,7 +8,7 @@ using Event = SettingsMenu::Event;
 
 static SettingsMenu known(bool fresh = false) {
     SettingsMenu menu({"amber", "green", "white"});
-    menu.known({"en", "lv", "de", "ru"}, {"lv", "en", "amber", 100}, fresh);
+    menu.known({"en", "lv", "de", "ru"}, {"lv", "amber", 100}, fresh);
     return menu;
 }
 
@@ -41,32 +41,30 @@ TEST_CASE("asked for (a grown-up asked Cubey), it opens; not before the server h
     CHECK(menu.is_open());
 }
 
-TEST_CASE("an arrow tapped steps its line's language, round, past the other line's; the keys alone don't (2026-10-12)") {
+TEST_CASE("an arrow tapped steps the language it speaks, round; the keys alone don't (2026-10-12)") {
     SettingsMenu menu = known();
     hold(menu, false, 0, 5100);
     menu.step(0, 1, 6000);
-    CHECK(menu.language() == "de"); // en is the other line's
+    CHECK(menu.language() == "de");
     menu.step(0, 1, 6100);
     menu.step(0, 1, 6200);
-    CHECK(menu.language() == "lv"); // round, past en
-    menu.step(1, -1, 6300);
-    CHECK(menu.learns() == "ru");
+    CHECK(menu.language() == "en"); // round
     menu.keys({true, false, 1, 0}, 7000);
-    CHECK(menu.learns() == "ru"); // a press of "+" isn't a step any more
+    CHECK(menu.language() == "en"); // a press of "+" isn't a step any more
 }
 
-TEST_CASE("the third line, its theme: an arrow steps it round its themes; changed, it is sent") {
+TEST_CASE("the second line, its theme: an arrow steps it round its themes; changed, it is sent") {
     SettingsMenu menu = known();
     CHECK(menu.theme() == "amber");
     hold(menu, false, 0, 5100);
-    menu.step(2, -1, 6000);
+    menu.step(1, -1, 6000);
     CHECK(menu.theme() == "white"); // round
-    menu.step(2, 1, 6100);
-    menu.step(2, 1, 6200);
+    menu.step(1, 1, 6100);
+    menu.step(1, 1, 6200);
     CHECK(menu.theme() == "green");
     menu.confirm();
     CHECK(menu.to_send());
-    menu.known({"en", "lv", "de", "ru"}, {"lv", "en", "green", 100}, false); // the server, as it was set
+    menu.known({"en", "lv", "de", "ru"}, {"lv", "green", 100}, false); // the server, as it was set
     CHECK_FALSE(menu.to_send());
 }
 
@@ -82,8 +80,35 @@ TEST_CASE("its brightness, slid: 10 to 100%, in tens; changed, it is sent") {
     CHECK(menu.brightness() == 60);
     menu.confirm();
     CHECK(menu.to_send());
-    menu.known({"en", "lv", "de", "ru"}, {"lv", "en", "amber", 60}, false);
+    menu.known({"en", "lv", "de", "ru"}, {"lv", "amber", 60}, false);
     CHECK_FALSE(menu.to_send());
+}
+
+TEST_CASE("its volume, slid: 10 to 100%, in tens; changed, it is sent") {
+    SettingsMenu menu = known();
+    CHECK(menu.volume() == 100);
+    hold(menu, false, 0, 5100);
+    menu.set_volume(30, 6000);
+    CHECK(menu.volume() == 30);
+    menu.set_volume(0, 6100);
+    CHECK(menu.volume() == 10); // as quiet as it goes: heard all the same
+    menu.confirm();
+    CHECK(menu.to_send());
+    menu.known({"en", "lv", "de", "ru"}, {"lv", "amber", 100, 10}, false);
+    CHECK_FALSE(menu.to_send());
+}
+
+TEST_CASE("two pages: its language and theme, then its brightness and volume; it opens on the first") {
+    SettingsMenu menu = known();
+    hold(menu, false, 0, 5100);
+    CHECK(menu.page() == 0);
+    menu.to_page(1, 6000);
+    CHECK(menu.page() == 1);
+    menu.to_page(5, 6100); // none such
+    CHECK(menu.page() == 1);
+    menu.confirm();
+    hold(menu, false, 10000, 5100);
+    CHECK(menu.page() == 0); // anew
 }
 
 TEST_CASE("OK closes it; so do – held again, the power button and a minute alone; changed, or a new Cubey's, it is sent") {
@@ -96,7 +121,7 @@ TEST_CASE("OK closes it; so do – held again, the power button and a minute alo
     menu.step(0, 1, 16000);
     CHECK(hold(menu, false, 17000, 5100) == Event::Closed);
     CHECK(menu.to_send());
-    menu.known({"en", "lv", "de", "ru"}, {"de", "en", "amber", 100}, false); // the server, as it was set
+    menu.known({"en", "lv", "de", "ru"}, {"de", "amber", 100}, false); // the server, as it was set
     CHECK_FALSE(menu.to_send());
     hold(menu, false, 30000, 5100);
     CHECK(menu.keys({}, 35100 + SettingsMenu::kIdleMs - 100) == Event::None);
@@ -115,9 +140,9 @@ TEST_CASE("a new Cubey's menu opens by itself, once, when the server first says 
     CHECK(known().offer(100) == Event::None); // one set up before
 }
 
-TEST_CASE("only a new Cubey's menu, opened by itself, is its languages alone; opened by hand or asked for, the whole of it") {
+TEST_CASE("only a new Cubey's menu, opened by itself, is its language alone; opened by hand or asked for, the whole of it") {
     SettingsMenu menu;
-    menu.known({"en", "lv"}, {"lv", "en", "amber", 100}, true);
+    menu.known({"en", "lv"}, {"lv", "amber", 100}, true);
     REQUIRE(menu.offer(0) == Event::Opened);
     CHECK(menu.first());
     menu.confirm();

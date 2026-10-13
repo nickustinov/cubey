@@ -48,7 +48,7 @@ async function talk(opened: Opened = {}, earlier = before, battery: Battery | nu
   const live = cubey({ connect, history: { recent: () => earlier }, log: (line) => void logged.push(line) })
     .open(anna, opened, {
       rate: 16000, text: (m) => void texts.push(m), audio: (pcm) => void (audio += pcm.length), exchange: (e) => void exchanges.push(e),
-      battery: () => battery ?? undefined, spent: (s) => void spent.push(s), learn: () => anna, brighten: () => anna,
+      battery: () => battery ?? undefined, spent: (s) => void spent.push(s), learn: () => anna, brighten: () => anna, turn: () => anna,
     });
   await Bun.sleep(1);
   const gemini = async (...msgs: LiveHeard[]) => {

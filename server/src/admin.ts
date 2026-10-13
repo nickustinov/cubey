@@ -51,9 +51,11 @@ function since(at: string | undefined, now: Date): string {
 }
 
 const childLine = (child: Child) =>
-  [child.name ?? "a child not named yet", child.gender, ageOf(child)].filter(Boolean).join(", ") + ` · speaks ${child.language.toUpperCase()}, learns ${child.learns.toUpperCase()}`;
+  [child.name ?? "a child not named yet", child.gender, ageOf(child)].filter(Boolean).join(", ") + ` · speaks ${child.language.toUpperCase()}, learns ${child.learns?.toUpperCase() ?? "nothing yet"}`;
 const spendsLine = (s: Spends) => `${usd(s.today)} today · ${usd(s.month)} this month · ${usd(s.total)} in all`;
 const titleOf = (device: Device, child: Child) => device.label ?? (child.name ? `${child.name}'s Cubey` : "A new Cubey");
+
+const percents = Array.from({ length: 10 }, (_, i): [string, string] => [String((i + 1) * 10), `${(i + 1) * 10}%`]); // 10 to 100%
 
 const select = (name: string, value: string, options: [string, string][]) =>
   `<select name="${name}">${options.map(([v, label]) => `<option value="${h(v)}"${v === value ? " selected" : ""}>${h(label)}</option>`).join("")}</select>`;
@@ -226,8 +228,9 @@ ${modelsForm()}`);
 <label>Girl or boy</label>${select("gender", child.gender ?? "", [["", "not known"], ["girl", "girl"], ["boy", "boy"]])}
 <label>Age</label>${select("age", String(yearsOf(child) ?? ""), [["", "not known"], ...Array.from({ length: 12 }, (_, i): [string, string] => [String(i + 1), `${i + 1} year${i ? "s" : ""}`])])}
 <label>Cubey speaks</label>${select("language", child.language, LANGUAGES.map((l) => [l, LANGUAGE_NAMES[l]]))}
-<label>It teaches</label>${select("learns", child.learns, LESSON_LANGUAGES.map((l) => [l, languageName(l)]))}
-<label>Brightness</label>${select("brightness", String(child.brightness ?? 100), Array.from({ length: 10 }, (_, i) => [String((i + 1) * 10), `${(i + 1) * 10}%`]))}
+<label>It teaches</label>${select("learns", child.learns ?? "", [["", "not chosen yet: the child chooses, asked"], ...LESSON_LANGUAGES.map((l): [string, string] => [l, languageName(l)])])}
+<label>Brightness</label>${select("brightness", String(child.brightness ?? 100), percents)}
+<label>Volume</label>${select("volume", String(child.volume ?? 100), percents)}
 <label>Theme</label>${select("theme", child.theme ?? "amber", THEMES.map((t) => [t, t === "vfd" ? "VFD" : t[0].toUpperCase() + t.slice(1)]))}
 <label>At home</label>${select("parents", child.parents, PARENTS.map((p) => [p, p.replace("_", " and ")]))}
 <label>Time zone</label><input name="timeZone" value="${h(child.timeZone)}">
@@ -246,7 +249,7 @@ ${modelsForm()}`);
     fleet.block(id, form.get("blocked") === "on");
     fleet.memory(id).edit({
       name: field("name"), gender: field("gender"), age: field("age"), language: field("language"), learns: field("learns"),
-      parents: field("parents"), timeZone: field("timeZone"), brightness: field("brightness"),
+      parents: field("parents"), timeZone: field("timeZone"), brightness: field("brightness"), volume: field("volume"),
       theme: field("theme"),
     }, now());
     deps.changed?.(id);

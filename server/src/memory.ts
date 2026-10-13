@@ -8,17 +8,17 @@ import { dirname } from "node:path";
 import { ageMonths, type Child, type Gender, type Language, LANGUAGES, type Parents, PARENTS, type Theme, THEMES, yearsOf } from "./child";
 import { LESSON_LANGUAGES } from "./lesson";
 
-// setUp: when a grown-up set its languages on its menu (a new Cubey's opens by itself until then).
+// setUp: when a grown-up set its language on its menu (a new Cubey's opens by itself until then).
 type Fields = {
-  id: string; name?: string; gender?: Gender; birthday?: string; language: Language; learns: string; parents: Parents; timeZone: string;
-  brightness?: number; theme?: Theme; setUp?: string;
+  id: string; name?: string; gender?: Gender; birthday?: string; language: Language; learns?: string; parents: Parents; timeZone: string;
+  brightness?: number; volume?: number; theme?: Theme; setUp?: string;
 };
 const LABELS: [keyof Fields, string][] = [
   ["id", "Id"], ["name", "Name"], ["gender", "Gender"], ["birthday", "Birthday"], ["language", "Speaks"], ["learns", "Learns"],
-  ["parents", "Parents"], ["timeZone", "Time zone"], ["brightness", "Brightness"], ["theme", "Theme"], ["setUp", "Set up"],
+  ["parents", "Parents"], ["timeZone", "Time zone"], ["brightness", "Brightness"], ["volume", "Volume"], ["theme", "Theme"], ["setUp", "Set up"],
 ];
-// What a talk tells Cubey of the child: age in years.
-export type Learned = { name?: string; gender?: Gender; age?: number };
+// What a talk tells Cubey of the child: age in years; learns, the language they want to learn (a code).
+export type Learned = { name?: string; gender?: Gender; age?: number; learns?: string };
 
 const zoned = (zone?: string) => {
   try {
@@ -27,11 +27,12 @@ const zoned = (zone?: string) => {
     return undefined;
   }
 };
-const teaches = (language: Language, learns?: string) =>
-  learns && learns !== language && LESSON_LANGUAGES.includes(learns) ? learns : language === "en" ? "fr" : "en";
+// A language the child can learn: one the word game teaches, and not the one Cubey speaks with them.
+const learnable = (language: Language, learns?: string) => (learns && learns !== language && LESSON_LANGUAGES.includes(learns) ? learns : undefined);
 
-// The screen's brightness, in percent: 10 to 100 (dimmer, it can't be seen); none for anything else.
-const brightnessOf = (given: unknown) => {
+// The screen's brightness or the speaker's volume, in percent: 10 to 100 (less, it can't be seen or heard); none for
+// anything else.
+const percentOf = (given: unknown) => {
   const percent = Number(given);
   return Number.isInteger(percent) && percent >= 10 && percent <= 100 ? percent : undefined;
 };
@@ -51,10 +52,11 @@ function checked(given: Record<string, string | undefined>): Fields {
     ...((given.gender === "girl" || given.gender === "boy") && { gender: given.gender }),
     ...(/^\d{4}-\d{2}-\d{2}$/.test(given.birthday ?? "") && { birthday: given.birthday }),
     language,
-    learns: teaches(language, given.learns),
+    ...(learnable(language, given.learns) && { learns: given.learns }),
     parents: (PARENTS as readonly string[]).includes(given.parents ?? "") ? (given.parents as Parents) : "mum_dad",
     timeZone: zoned(given.timeZone) ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-    ...(brightnessOf(given.brightness) && { brightness: brightnessOf(given.brightness) }),
+    ...(percentOf(given.brightness) && { brightness: percentOf(given.brightness) }),
+    ...(percentOf(given.volume) && { volume: percentOf(given.volume) }),
     ...((THEMES as readonly string[]).includes(given.theme ?? "") && { theme: given.theme as Theme }),
     ...(given.setUp && { setUp: given.setUp }),
   };
@@ -82,16 +84,17 @@ export class Memory {
     if (learned.name) fields.name = learned.name;
     if (learned.gender) fields.gender = learned.gender;
     if (learned.age) fields.birthday = bornAbout(learned.age, today);
+    if (learnable(fields.language, learned.learns)) fields.learns = learned.learns;
     this.write(fields);
     return this.child(today);
   }
 
   // A grown-up's, on the admin page (admin.ts): what is given replaces what was, checked; an empty one, not known. An
   // age in years, as a child tells it; the same as it was keeps the birthday guessed before, so it grows as it did.
-  edit(changes: Partial<Record<"name" | "gender" | "age" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "theme", string>>, today = new Date()): Child {
+  edit(changes: Partial<Record<"name" | "gender" | "age" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "volume" | "theme", string>>, today = new Date()): Child {
     const fields = this.read();
     const { age, ...rest } = changes;
-    const given: Record<string, string | undefined> = { ...fields, brightness: fields.brightness?.toString() };
+    const given: Record<string, string | undefined> = { ...fields, brightness: fields.brightness?.toString(), volume: fields.volume?.toString() };
     for (const [key, value] of Object.entries(rest)) given[key] = value?.trim() || undefined;
     if (age !== undefined) {
       const years = Number(age);
@@ -102,21 +105,30 @@ export class Memory {
     return this.child(today);
   }
 
-  // The device's menu: false, and nothing changed, for a language it can't speak or teach, or the same twice; a theme
-  // there is none of, as it was.
-  set(settings: { language: string; learns: string; theme?: string }): boolean {
+  // The device's menu: false, and nothing changed, for a language it can't speak; a theme there is none of, as it was.
+  // The language the child learns stays, unless it is now the one Cubey speaks: then none, until they ask for one.
+  set(settings: { language: string; theme?: string }): boolean {
     const fields = this.read();
-    if (!(LANGUAGES as readonly string[]).includes(settings.language) || teaches(settings.language as Language, settings.learns) !== settings.learns) return false;
+    if (!(LANGUAGES as readonly string[]).includes(settings.language)) return false;
+    const language = settings.language as Language;
     const theme = (THEMES as readonly string[]).includes(settings.theme ?? "") ? (settings.theme as Theme) : fields.theme;
+    const { learns, ...rest } = fields;
     this.write({
-      ...fields, language: settings.language as Language, learns: settings.learns, ...(theme && { theme }), setUp: new Date().toISOString().slice(0, 10),
+      ...rest, language, ...(learnable(language, learns) && { learns }), ...(theme && { theme }), setUp: new Date().toISOString().slice(0, 10),
     });
+    return true;
+  }
+
+  // Asked for by voice, or slid on its menu: false, and nothing changed, for a volume it can't have.
+  turn(percent: number): boolean {
+    if (!percentOf(percent)) return false;
+    this.write({ ...this.read(), volume: percent });
     return true;
   }
 
   // A grown-up asked Cubey for it: false, and nothing changed, for a brightness it can't have.
   brighten(percent: number): boolean {
-    if (!brightnessOf(percent)) return false;
+    if (!percentOf(percent)) return false;
     this.write({ ...this.read(), brightness: percent });
     return true;
   }
@@ -139,6 +151,6 @@ export class Memory {
   private write(fields: Fields) {
     mkdirSync(dirname(this.path), { recursive: true });
     const lines = LABELS.filter(([key]) => fields[key]).map(([key, label]) => `- ${label}: ${fields[key]}`);
-    writeFileSync(this.path, `# What Cubey knows of the child\n\nCubey keeps this as the child tells it, and the device's menu sets the languages (“–” held 5 s), a grown-up asks it for its brightness (in percent); a grown-up may change it, a line each.\n\n${lines.join("\n")}\n`);
+    writeFileSync(this.path, `# What Cubey knows of the child\n\nCubey keeps this as the child tells it, and the device's menu sets the languages (“–” held 5 s), a grown-up asks it for its brightness and volume (in percent); a grown-up may change it, a line each.\n\n${lines.join("\n")}\n`);
   }
 }

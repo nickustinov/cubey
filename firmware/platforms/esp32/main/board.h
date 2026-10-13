@@ -34,7 +34,7 @@ constexpr uint16_t kMicSlots = 0b0011;
 constexpr float kMicGainDb = 12.0f;
 constexpr int kMicDigitalDb = 25;
 constexpr float kEchoGainDb = 12.0f;
-constexpr int kSpeakerVolume = 100; // the codec's output, 0..100
+constexpr int kSpeakerVolume = 100; // the codec's output, 0..100, until the server says the Cubey's
 
 // Wi-Fi and the server link; they connect and reconnect on their own (network.cpp).
 void network_start();

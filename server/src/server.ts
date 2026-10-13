@@ -59,7 +59,7 @@ const wipe = (id: string) => {
 };
 const adminPage = admin({
   password: process.env.CUBEY_ADMIN_PASSWORD, fleet, spending, models, wipe,
-  changed: (id) => sockets.get(id)?.forEach((ws) => ws.data.session?.sendSettings()), // its brightness, at once
+  changed: (id) => sockets.get(id)?.forEach((ws) => ws.data.session?.sendSettings()), // its brightness and volume, at once
 });
 const modelFor = (job: Job) => completeWith(() => models.model(job));
 const talks = TALK === "live"
@@ -70,7 +70,7 @@ const talks = TALK === "live"
       new Transcriber({ language: child.language, also, waitMs, terms: child.name ? [child.name] : [], onEnd: onHeard, onWords }),
     speak: (opts) => new Speaker(opts),
     lessons: new Lessons({
-      progress, words: new LessonWords(db), complete: modelFor("games"), language: (child) => child.learns, picture,
+      progress, words: new LessonWords(db), complete: modelFor("games"), picture,
     }),
   });
 
@@ -103,11 +103,12 @@ Bun.serve<Data>({
         child: () => memory.child(),
         settings: {
           get: () => ({
-            language: memory.child().language, learns: memory.child().learns, new: memory.isNew(), brightness: memory.child().brightness ?? 100,
+            language: memory.child().language, new: memory.isNew(), brightness: memory.child().brightness ?? 100, volume: memory.child().volume ?? 100,
             theme: memory.child().theme ?? "amber",
           }),
           set: (settings) => memory.set(settings),
           brighten: (percent) => void memory.brighten(percent),
+          turn: (percent) => void memory.turn(percent),
         },
         learn: (learned) => memory.learn(learned),
         spent: (spent) => spending.add(device, spent),
