@@ -3,7 +3,7 @@
 [![CI](https://github.com/nickustinov/cubey/actions/workflows/ci.yml/badge.svg)](https://github.com/nickustinov/cubey/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**A small talking cube for children aged 2–6.** Cubey is a kind and curious friend with two glowing eyes on a board of dots. A child talks with it hands-free about anything; it answers in a warm voice, remembers their talks before, and does a few things besides talking: brushing teeth, timers, games with letters and numbers, drawing on its screen, teaching words of another language.
+**A small talking cube for children aged 2–6.** Cubey is a kind and curious friend with two glowing eyes on a board of dots. A child talks with it hands-free (or holding its screen) about anything; it answers in a warm voice, remembers their talks before, and does a few things besides talking: brushing teeth, timers, games with letters and numbers, drawing on its screen, teaching words of another language.
 
 <table>
   <tr>
@@ -88,13 +88,14 @@ Cubey doesn't answer these. It says warmly that they are great questions for the
 | Press the power button while it's asleep | Cubey wakes with a hello that goes on from their last talk |
 | Press the power button while it's awake | A step back: from a routine (brushing, a timer, the dice, the word game, a drawing) to Cubey's eyes, and from its eyes to sleep |
 | Hold the power button (2 s) | Sleep |
-| Hold "–" for 5 s | The grown-ups' menu, in two pages: the language Cubey speaks and the screen's theme (amber, green, red, blue, VFD, white); then the screen's brightness and Cubey's volume. Tap the arrows beside a line to change it, slide a slider, tap the page dots to turn the page, OK to save |
+| Hold "–" for 5 s | The grown-ups' menu, in two pages: the language Cubey speaks and the screen's theme (amber, green, red, blue, VFD, white); then the screen's brightness, Cubey's volume and how the child talks to it (FREE: hands-free; HOLD: holding its screen). Tap the arrows beside a line to change it, slide a slider, tap the page dots to turn the page, OK to save |
 | Hold "+" for 5 s | The Wi-Fi setup: the networks around, tap one, type the password on a keyboard of dots |
 | Tap the screen | Starts brushing, picks a picture in the word game, rolls the dice again |
+| Hold the screen, held to talk | Cubey listens while the child holds its screen, its ear swaying gently in place of its eyes, and answers when they let go. Holding it while Cubey speaks stops it. A tap is still a tap |
 | Shake the cube | Rolls the dice again |
 | Put the cube down on any side | The picture turns to stay upright |
 
-Cubey sleeps after half a minute of quiet, and after 45 s without its server.
+Cubey sleeps after half a minute of quiet (held to talk, a minute without a hold), and after 45 s without its server.
 
 ## How it works
 
@@ -199,7 +200,7 @@ A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick 
 - the models Cubey thinks with, a dropdown for each job (talk, games, drawing), used from the next turn; a model whose provider key isn't set is greyed out
 - every Cubey, its child, whether it's online, and what it cost today, this month and in all
 - a Cubey's talks, word for word, with the big questions marked
-- its child's name, age and languages, its theme, brightness and volume, its name, blocking it
+- its child's name, age and languages, its theme, brightness and volume, how the child talks to it (hands-free or holding its screen), its name, blocking it
 - a full reset, which wipes a Cubey on the server and, if it's on, the cube itself
 - where the money goes: by day, by Cubey and by kind (listening, speaking, each model)
 

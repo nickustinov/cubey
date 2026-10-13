@@ -414,3 +414,187 @@ TEST_CASE("a kept tap goes with the talk when it ends; no talk, no tap") {
     voice.tick(2100);
     CHECK(fake::hal.sent == std::vector<std::string>{kOpen, kListen});
 }
+
+// Held to talk: she holds the screen as she talks.
+static const std::string kListenHeld = R"({"type":"listen","hold":true})";
+static const std::string kRelease = R"({"type":"release"})";
+
+// Held to talk: the talk is open and Cubey has said hello: the device waits for her to hold its screen.
+static void waiting(Voice &voice, uint32_t now = 0) {
+    voice.set_hold(true);
+    voice.tick(now);
+    REQUIRE(voice.open(now));
+    fake::hal.incoming.push_back(kSaid);
+    voice.tick(now);
+    voice.tick(now);
+    REQUIRE(voice.state() == VoiceState::Idle);
+    fake::hal.sent.clear();
+}
+
+TEST_CASE("held to talk: once Cubey has spoken it waits for her; held, it listens; let go, her turn is over") {
+    fake::reset();
+    Voice voice;
+    waiting(voice);
+    voice.tick(10000);
+    CHECK(voice.state() == VoiceState::Idle);
+    CHECK_FALSE(fake::hal.mic_on);
+    CHECK(fake::hal.sent.empty());
+
+    CHECK(voice.press(10000));
+    CHECK(voice.state() == VoiceState::Listening);
+    CHECK(fake::hal.mic_on);
+    CHECK(fake::hal.sent == std::vector<std::string>{kListenHeld});
+    CHECK_FALSE(voice.press(10100)); // held already
+    voice.release(11000);
+    CHECK(voice.state() == VoiceState::Thinking);
+    CHECK_FALSE(fake::hal.mic_on);
+    CHECK(fake::hal.sent == std::vector<std::string>{kListenHeld, kRelease});
+
+    fake::hal.incoming.push_back(kHeard); // the server's, as her turn ended there
+    fake::hal.speaker_busy = true;
+    voice.tick(11300);
+    CHECK(voice.state() == VoiceState::Speaking);
+    fake::hal.incoming.push_back(kSaid);
+    fake::hal.speaker_busy = false;
+    voice.tick(12000);
+    CHECK(voice.state() == VoiceState::Idle); // waits for her again
+    voice.tick(20000);
+    CHECK(voice.state() == VoiceState::Idle);
+    CHECK(fake::hal.sent == std::vector<std::string>{kListenHeld, kRelease});
+}
+
+TEST_CASE("held to talk: no talk, or hands-free, holding it is nothing") {
+    fake::reset();
+    Voice closed;
+    closed.set_hold(true);
+    closed.tick(0);
+    CHECK_FALSE(closed.press(0));
+
+    fake::reset();
+    Voice free;
+    listening(free);
+    CHECK_FALSE(free.press(100));
+    free.release(200);
+    CHECK(free.state() == VoiceState::Listening);
+    CHECK(fake::hal.sent.empty());
+}
+
+TEST_CASE("held to talk: held as Cubey speaks, it stops, and so does the speech on its way until the server listens") {
+    fake::reset();
+    Voice voice;
+    waiting(voice);
+    voice.press(100);
+    voice.release(500);
+    fake::hal.speaker_busy = true;
+    voice.tick(600);
+    REQUIRE(voice.state() == VoiceState::Speaking);
+    fake::hal.sent.clear();
+    const int stops = fake::hal.speaker_stops;
+
+    CHECK(voice.press(700));
+    CHECK(voice.state() == VoiceState::Listening);
+    CHECK(fake::hal.mic_on);
+    CHECK(fake::hal.sent == std::vector<std::string>{kListenHeld});
+    CHECK(fake::hal.speaker_stops == stops + 1);
+    fake::hal.speaker_busy = true; // the answer's speech, sent before the server heard her
+    voice.tick(750);
+    CHECK_FALSE(fake::hal.speaker_busy);
+    fake::hal.incoming.push_back(R"({"type":"listening"})"); // all that came before it was the answer's
+    voice.tick(800);
+    const int heard = fake::hal.speaker_stops;
+    voice.tick(850);
+    CHECK(fake::hal.speaker_stops == heard);
+    CHECK(voice.state() == VoiceState::Listening);
+}
+
+TEST_CASE("held to talk: held through Cubey's goodbye, the talk goes on") {
+    fake::reset();
+    Voice voice;
+    waiting(voice);
+    voice.press(100);
+    voice.release(500);
+    fake::hal.speaker_busy = true;
+    fake::hal.incoming.push_back(kLast);
+    voice.tick(600);
+    CHECK(voice.press(700));
+    voice.tick(800);
+    CHECK(voice.is_open());
+    CHECK(voice.state() == VoiceState::Listening);
+}
+
+TEST_CASE("held to talk: a minute with nobody holding it ends the talk; holding it is no quiet") {
+    fake::reset();
+    Voice voice;
+    waiting(voice);
+    voice.tick(59000);
+    CHECK(voice.is_open()); // half a minute is hands-free's
+    voice.press(59000);
+    voice.tick(150000); // held all along
+    CHECK(voice.is_open());
+    voice.release(150000);
+    fake::hal.incoming.push_back(kSaid);
+    voice.tick(150100);
+    REQUIRE(voice.state() == VoiceState::Idle);
+    voice.tick(210100);
+    CHECK(voice.is_open());
+    voice.tick(210101);
+    CHECK_FALSE(voice.is_open());
+    CHECK(voice.ended() == TalkEnd::Quiet);
+}
+
+TEST_CASE("held to talk: no talking over Cubey; the mic is on only while she holds it") {
+    fake::reset();
+    fake::hal.hears_over_speech = true;
+    Voice voice;
+    waiting(voice);
+    voice.press(100);
+    voice.release(500);
+    fake::hal.speaker_busy = true;
+    voice.tick(600);
+    CHECK(voice.state() == VoiceState::Speaking);
+    CHECK_FALSE(fake::hal.mic_on);
+    fake::hal.voice_over = true;
+    voice.tick(700);
+    CHECK(fake::hal.sent == std::vector<std::string>{kListenHeld, kRelease});
+}
+
+TEST_CASE("held to talk: a tapped picture is her turn while it waits for her, and kept while the question is asked") {
+    static const std::string kCat = R"({"type":"tapped","id":"cat"})", kDog = R"({"type":"tapped","id":"dog"})";
+    fake::reset();
+    Voice voice;
+    waiting(voice);
+    CHECK(voice.tap("cat"));
+    voice.tick(100);
+    CHECK(fake::hal.sent == std::vector<std::string>{kCat});
+    CHECK(voice.state() == VoiceState::Thinking);
+    CHECK_FALSE(voice.tap("dog")); // the pictures on show belong to the last question
+
+    fake::hal.speaker_busy = true;
+    voice.tick(200);
+    CHECK(voice.tap("dog")); // the next question is being asked: its answer
+    fake::hal.incoming.push_back(kSaid);
+    fake::hal.speaker_busy = false;
+    voice.tick(300);
+    CHECK(fake::hal.sent == std::vector<std::string>{kCat, kDog});
+    CHECK(voice.state() == VoiceState::Thinking);
+}
+
+TEST_CASE("her turn: hands-free, while it listens; held to talk, while it waits for her or she holds its screen") {
+    fake::reset();
+    Voice free;
+    CHECK_FALSE(free.her_turn());
+    listening(free);
+    CHECK(free.her_turn());
+    fake::hal.incoming.push_back(kHeard);
+    free.tick(1000);
+    CHECK_FALSE(free.her_turn()); // thinking
+
+    fake::reset();
+    Voice held;
+    waiting(held);
+    CHECK(held.her_turn());
+    held.press(100);
+    CHECK(held.her_turn());
+    held.release(200);
+    CHECK_FALSE(held.her_turn());
+}

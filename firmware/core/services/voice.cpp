@@ -9,10 +9,11 @@
 
 namespace cubey {
 
-constexpr uint32_t kAnswerTimeoutMs = 15000; // the server never started speaking
-constexpr uint32_t kQuietCloseMs = 30000;    // nobody spoke: the talk ends, and Cubey sleeps
-constexpr uint32_t kRetryMs = 5000;          // after a failed turn, before listening again
-constexpr unsigned kMessagesPerTick = 4;     // leaves time for drawing between them
+constexpr uint32_t kAnswerTimeoutMs = 15000;  // the server never started speaking
+constexpr uint32_t kQuietCloseMs = 30000;     // nobody spoke: the talk ends, and Cubey sleeps
+constexpr uint32_t kHeldQuietCloseMs = 60000; // ...held to talk, nobody held its screen
+constexpr uint32_t kRetryMs = 5000;           // after a failed turn, before listening again
+constexpr unsigned kMessagesPerTick = 4;      // leaves time for drawing between them
 
 bool Voice::open(uint32_t now, bool again, const std::string &with) {
     if (!hal::link_connected() || open_) return false;
@@ -37,11 +38,12 @@ void Voice::end(TalkEnd why) {
     state_ = VoiceState::Idle;
     open_ = false;
     ended_ = why;
+    dropping_ = false;
     tap_.clear();
 }
 
 void Voice::listen() {
-    hal::link_send(R"({"type":"listen"})");
+    hal::link_send(hold_ ? R"({"type":"listen","hold":true})" : R"({"type":"listen"})");
     hal::mic_stream(true);
     state_ = VoiceState::Listening;
     if (!tap_.empty()) hal::link_send(tapped_message(tap_));
@@ -53,6 +55,26 @@ bool Voice::tap(const std::string &id) {
     if (state_ == VoiceState::Listening) hal::link_send(tapped_message(id));
     else tap_ = id;
     return true;
+}
+
+bool Voice::press(uint32_t now) {
+    if (!open_ || !hold_ || state_ == VoiceState::Listening) return false;
+    if (state_ != VoiceState::Idle) { // what Cubey says, or is about to: dropped for her turn
+        hal::speaker_stop();
+        dropping_ = true;
+        done_ = last_ = false; // an interrupted goodbye is no goodbye
+    }
+    quiet_since_ = now;
+    listen();
+    return true;
+}
+
+void Voice::release(uint32_t now) {
+    if (!open_ || !hold_ || state_ != VoiceState::Listening) return;
+    hal::link_send(R"({"type":"release"})");
+    hal::mic_stream(false);
+    state_ = VoiceState::Thinking;
+    asked_at_ = quiet_since_ = now;
 }
 
 void Voice::rest(uint32_t now, uint32_t pause_ms) {
@@ -88,7 +110,10 @@ void Voice::tick(uint32_t now, const std::function<void(const ServerMessage &, c
             continue;
         }
         if (!open_) continue; // what was on its way for a talk that has ended
-        if (msg.type == "interrupted" && (state_ == VoiceState::Thinking || state_ == VoiceState::Speaking)) {
+        if (msg.type == "listening" && dropping_) {
+            hal::speaker_stop(); // all of the speech before it was the answer she held its screen over
+            dropping_ = false;
+        } else if (msg.type == "interrupted" && (state_ == VoiceState::Thinking || state_ == VoiceState::Speaking)) {
             // She talked over it: all of its speech came before, and the server listens to her already.
             hal::speaker_stop();
             done_ = last_ = false; // an interrupted goodbye is no goodbye
@@ -110,11 +135,13 @@ void Voice::tick(uint32_t now, const std::function<void(const ServerMessage &, c
         }
     }
     if (!open_) return;
+    if (dropping_) hal::speaker_stop();
 
     const bool busy = hal::speaker_busy();
+    const bool over = talk_over_ && !hold_ && hal::hears_over_speech(); // she may talk over it (held: she holds its screen)
     if (state_ == VoiceState::Thinking && busy) {
         state_ = VoiceState::Speaking;
-        if (talk_over_ && hal::hears_over_speech()) { // she may talk over it: the server listens
+        if (over) { // the server listens
             hal::link_send(R"({"type":"overhear"})");
             hal::mic_stream(true);
             hal::voice_over_speech(); // from before it spoke
@@ -122,7 +149,7 @@ void Voice::tick(uint32_t now, const std::function<void(const ServerMessage &, c
         }
     }
     // Her voice over its speech, as the platform's detector hears it: the server stops it and hears her turn.
-    if (state_ == VoiceState::Speaking && talk_over_ && hal::hears_over_speech() && hal::voice_over_speech() && !voiced_) {
+    if (state_ == VoiceState::Speaking && over && hal::voice_over_speech() && !voiced_) {
         hal::link_send(R"({"type":"voice"})");
         voiced_ = true;
     }
@@ -143,12 +170,21 @@ void Voice::tick(uint32_t now, const std::function<void(const ServerMessage &, c
         hal::link_send(R"({"type":"stop"})");
         rest(now, 0);
     }
-    if (since(now, quiet_since_) > kQuietCloseMs && (state_ == VoiceState::Listening || state_ == VoiceState::Idle)) {
+    const bool waits = state_ == VoiceState::Idle || (state_ == VoiceState::Listening && !hold_); // held: she talks
+    if (waits && since(now, quiet_since_) > (hold_ ? kHeldQuietCloseMs : kQuietCloseMs)) {
         close();
         ended_ = TalkEnd::Quiet;
         return;
     }
-    if (state_ == VoiceState::Idle && since(now, idle_since_) >= pause_ms_) listen();
+    if (state_ != VoiceState::Idle) return;
+    if (!hold_) {
+        if (since(now, idle_since_) >= pause_ms_) listen();
+    } else if (!tap_.empty()) { // held to talk, her tap is her turn
+        hal::link_send(tapped_message(tap_));
+        tap_.clear();
+        state_ = VoiceState::Thinking;
+        asked_at_ = quiet_since_ = now;
+    }
 }
 
 } // namespace cubey

@@ -60,6 +60,19 @@ describe("Transcriber", () => {
     stt.cancel();
   });
 
+  test("held (she holds Cubey's screen as she talks): Soniox calls no end, her turn is over when she lets go", async () => {
+    server = fakeStt([{ text: "Jā", is_final: true }]);
+    let ends = 0;
+    const stt = new Transcriber({ language: "lv", hold: true, url: url(), onEnd: () => ends++ });
+    stt.send(new Uint8Array(640));
+    await tick();
+    expect(config.enable_endpoint_detection).toBe(false);
+    expect(config.max_endpoint_delay_ms).toBeUndefined();
+    expect(ends).toBe(0);
+    expect(await stt.finish()).toBe("Jā");
+    expect(finalized).toBe(1);
+  });
+
   test("with waitMs, a turn where nobody speaks ends by itself, with nothing heard", async () => {
     server = fakeStt([]);
     let ends = 0;

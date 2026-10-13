@@ -91,14 +91,15 @@ test("a Cubey's page: its talks, newest first, the big questions marked; its chi
   expect(html).toContain("for the parents");
   const saved = await post("/admin/d/44bd8d60da70", {
     label: "Annas Kubijs", name: "Anna", gender: "girl", age: "4", language: "lv", learns: "en", parents: "mum_dad",
-    timeZone: "Europe/Riga", brightness: "50", volume: "60", theme: "white", blocked: "on",
+    timeZone: "Europe/Riga", brightness: "50", volume: "60", theme: "white", hold: "yes", blocked: "on",
   }, cookie);
   expect(saved?.status).toBe(303);
   expect(fleet.get("44bd8d60da70")).toMatchObject({ label: "Annas Kubijs", blocked: true });
-  expect(fleet.memory("44bd8d60da70").child(now)).toMatchObject({ name: "Anna", timeZone: "Europe/Riga", brightness: 50, volume: 60, theme: "white" });
+  expect(fleet.memory("44bd8d60da70").child(now)).toMatchObject({ name: "Anna", timeZone: "Europe/Riga", brightness: 50, volume: 60, theme: "white", hold: true });
   expect(changed).toEqual(["44bd8d60da70"]); // to the Cubey, if it is on: its brightness and theme now
   const edited = await (await get("/admin/d/44bd8d60da70", cookie))!.text();
   expect(edited).toContain('<option value="white" selected>White</option>');
+  expect(edited).toContain('<option value="yes" selected>holding its screen</option>');
   expect(edited).toContain('<option value="4" selected>4 years</option>'); // an age in years, as Cubey is told it
   expect(edited).not.toContain('type="date"');
   expect(await (await get("/admin", cookie))!.text()).toContain("Anna, girl, 4 years ·");

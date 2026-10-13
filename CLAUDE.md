@@ -36,8 +36,8 @@ server/                Bun + TypeScript: the talk, the models, the device protoc
 firmware/              C++17 + LVGL 9.6
   core/                plain C++17 and LVGL, no platform includes
     cubey.cpp          the runtime: awake or asleep, the talk, routines, the buttons
-    services/          logic without drawing: voice turns, talk-over detection, timers, brushing, dice, spelling, menu, Wi-Fi setup, keyboard
-    ui/                drawing on the dot board (dots.h): eyes, mouth, dial, die, letters, spelling, cards, menu, Wi-Fi; font.cpp the dot font
+    services/          logic without drawing: voice turns (hands-free or held to talk), talk-over detection, timers, brushing, dice, spelling, menu, Wi-Fi setup, keyboard
+    ui/                drawing on the dot board (dots.h): eyes, ear, mouth, dial, die, letters, spelling, cards, menu, Wi-Fi; font.cpp the dot font
   hal/hal.h            what core needs from a platform
   platforms/mac/       the simulator (SDL window, AVAudioEngine with echo cancelling, headless screenshots)
   platforms/esp32/     the board: Waveshare ESP32-S3-Touch-AMOLED-2.16 (esp-sr echo cancelling, CO5300 panel)
@@ -71,7 +71,7 @@ With `HOST=0.0.0.0` and `CUBEY_DEVICE_TOKEN` in `server/.env` so the board can r
 cmake -S firmware -B build/firmware -G Ninja && cmake --build build/firmware   # simulator + tests
 ctest --test-dir build/firmware --output-on-failure                             # firmware tests
 build/firmware/platforms/mac/cubey-sim                                           # simulator window
-build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--ms 1000]
+build/firmware/platforms/mac/cubey-sim --screenshot build/shots/eyes.png [--online] [--battery 30|30+] [--turn 1] [--message JSON] [--tap X,Y] [--hold X,Y] [--power short|long] [--keys plus|minus|hold-plus|hold-minus] [--speech MS] [--no-wifi] [--ms 1000]
 
 cd server && bun run dev                                                         # server on ws://127.0.0.1:8788/device
 cd server && bun test && bunx tsc --noEmit                                       # server tests and types

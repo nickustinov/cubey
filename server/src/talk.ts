@@ -19,7 +19,8 @@ export type TalkOut = {
   spent(spent: Spent): void; learn(learned: Learned): Child; brighten(percent: number): Child; turn(percent: number): Child; colour(theme: string): Child; // turn: its volume; colour: its theme
 };
 export type Talk = {
-  listen(): void;
+  listen(hold?: boolean): void; // hold: she holds Cubey's screen as she talks, her turn over when she lets go (release)
+  release(): void;
   overhear(): void; // its speech plays: she may talk over it
   voice(): void; // the device's own detector heard her voice over Cubey's speech: she talks over it
   hearing(): boolean; // her mic is wanted

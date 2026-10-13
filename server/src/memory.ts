@@ -1,7 +1,8 @@
 // What Cubey knows of the child, kept on the server in memory.md (data/devices/<id>/, fleet.ts) for a grown-up to read
-// and change: what the child (or a grown-up) tells Cubey in a talk (their name, girl or boy, their age), what a grown-up
-// sets on the device's menu (the language Cubey speaks, the one its word game teaches), asks Cubey for (its screen's
-// brightness) or sets on the admin page (all of it, and its screen's theme).
+// and change: what the child (or a grown-up) tells Cubey in a talk (their name, girl or boy, their age, the language
+// its word game teaches), what a grown-up sets on the device's menu (the language Cubey speaks, its screen's theme and
+// brightness, its volume, whether the child holds its screen to talk), asks Cubey for (its brightness, volume and
+// theme) or sets on the admin page (all of it).
 // Begun as a child not known yet, in the household's time zone (CUBEY_CHILD_TIMEZONE).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
@@ -11,11 +12,12 @@ import { LESSON_LANGUAGES } from "./lesson";
 // setUp: when a grown-up set its language on its menu (a new Cubey's opens by itself until then).
 type Fields = {
   id: string; name?: string; gender?: Gender; birthday?: string; language: Language; learns?: string; parents: Parents; timeZone: string;
-  brightness?: number; volume?: number; theme?: Theme; setUp?: string;
+  brightness?: number; volume?: number; theme?: Theme; hold?: boolean; setUp?: string;
 };
 const LABELS: [keyof Fields, string][] = [
   ["id", "Id"], ["name", "Name"], ["gender", "Gender"], ["birthday", "Birthday"], ["language", "Speaks"], ["learns", "Learns"],
-  ["parents", "Parents"], ["timeZone", "Time zone"], ["brightness", "Brightness"], ["volume", "Volume"], ["theme", "Theme"], ["setUp", "Set up"],
+  ["parents", "Parents"], ["timeZone", "Time zone"], ["brightness", "Brightness"], ["volume", "Volume"], ["theme", "Theme"], ["hold", "Hold to talk"],
+  ["setUp", "Set up"],
 ];
 // What a talk tells Cubey of the child: age in years; learns, the language they want to learn (a code).
 export type Learned = { name?: string; gender?: Gender; age?: number; learns?: string };
@@ -58,6 +60,7 @@ function checked(given: Record<string, string | undefined>): Fields {
     ...(percentOf(given.brightness) && { brightness: percentOf(given.brightness) }),
     ...(percentOf(given.volume) && { volume: percentOf(given.volume) }),
     ...((THEMES as readonly string[]).includes(given.theme ?? "") && { theme: given.theme as Theme }),
+    ...(given.hold === "yes" && { hold: true }),
     ...(given.setUp && { setUp: given.setUp }),
   };
 }
@@ -91,10 +94,12 @@ export class Memory {
 
   // A grown-up's, on the admin page (admin.ts): what is given replaces what was, checked; an empty one, not known. An
   // age in years, as a child tells it; the same as it was keeps the birthday guessed before, so it grows as it did.
-  edit(changes: Partial<Record<"name" | "gender" | "age" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "volume" | "theme", string>>, today = new Date()): Child {
+  edit(changes: Partial<Record<"name" | "gender" | "age" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "volume" | "theme" | "hold", string>>, today = new Date()): Child {
     const fields = this.read();
     const { age, ...rest } = changes;
-    const given: Record<string, string | undefined> = { ...fields, brightness: fields.brightness?.toString(), volume: fields.volume?.toString() };
+    const given: Record<string, string | undefined> = {
+      ...fields, brightness: fields.brightness?.toString(), volume: fields.volume?.toString(), hold: fields.hold ? "yes" : undefined,
+    };
     for (const [key, value] of Object.entries(rest)) given[key] = value?.trim() || undefined;
     if (age !== undefined) {
       const years = Number(age);
@@ -105,16 +110,19 @@ export class Memory {
     return this.child(today);
   }
 
-  // The device's menu: false, and nothing changed, for a language it can't speak; a theme there is none of, as it was.
-  // The language the child learns stays, unless it is now the one Cubey speaks: then none, until they ask for one.
-  set(settings: { language: string; theme?: string }): boolean {
+  // The device's menu: false, and nothing changed, for a language it can't speak; a theme there is none of, as it was;
+  // no hold, as it was. The language the child learns stays, unless it is now the one Cubey speaks: then none, until
+  // they ask for one.
+  set(settings: { language: string; theme?: string; hold?: boolean }): boolean {
     const fields = this.read();
     if (!(LANGUAGES as readonly string[]).includes(settings.language)) return false;
     const language = settings.language as Language;
     const theme = (THEMES as readonly string[]).includes(settings.theme ?? "") ? (settings.theme as Theme) : fields.theme;
-    const { learns, ...rest } = fields;
+    const { learns, hold, ...rest } = fields;
+    const held = settings.hold ?? hold;
     this.write({
-      ...rest, language, ...(learnable(language, learns) && { learns }), ...(theme && { theme }), setUp: new Date().toISOString().slice(0, 10),
+      ...rest, language, ...(learnable(language, learns) && { learns }), ...(theme && { theme }), ...(held && { hold: true }),
+      setUp: new Date().toISOString().slice(0, 10),
     });
     return true;
   }
@@ -157,7 +165,7 @@ export class Memory {
 
   private write(fields: Fields) {
     mkdirSync(dirname(this.path), { recursive: true });
-    const lines = LABELS.filter(([key]) => fields[key]).map(([key, label]) => `- ${label}: ${fields[key]}`);
+    const lines = LABELS.filter(([key]) => fields[key]).map(([key, label]) => `- ${label}: ${fields[key] === true ? "yes" : fields[key]}`);
     writeFileSync(this.path, `# What Cubey knows of the child\n\nCubey keeps this as the child tells it, and the device's menu sets the languages (“–” held 5 s), a grown-up asks it for its brightness and volume (in percent); a grown-up may change it, a line each.\n\n${lines.join("\n")}\n`);
   }
 }

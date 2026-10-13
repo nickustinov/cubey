@@ -110,6 +110,7 @@ static int run_screenshot(int argc, char **argv) {
         lv_point_t tap{-1, -1};              // or a finger's tap
         const char *keys = nullptr;          // or the board's keys, pressed
         int speech_ms = 0;                   // or Cubey's speech, playing so long
+        bool kept = false;                   // the finger kept there (held to talk)
     };
     std::vector<Step> steps;
     for (int i = 1; i < argc; i++) {
@@ -124,6 +125,7 @@ static int run_screenshot(int argc, char **argv) {
         else if (a == "--no-wifi") mac_wifi_unset();
         else if (a == "--turn") mac_turn(atoi(argv[++i]));
         else if (int x, y; a == "--tap" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) steps.push_back({nullptr, PowerPress::None, {x, y}}), i++;
+        else if (int x, y; a == "--hold" && i + 1 < argc && sscanf(argv[i + 1], "%d,%d", &x, &y) == 2) steps.push_back({nullptr, PowerPress::None, {x, y}, nullptr, 0, true}), i++;
         else if (a == "--battery") {
             const std::string b = argv[++i];
             mac_set_battery({std::stoi(b), b.back() == '+'});
@@ -135,11 +137,11 @@ static int run_screenshot(int argc, char **argv) {
     alignas(64) static uint8_t buf[kSize * kSize * 2];
     lv_display_set_buffers(disp, buf, nullptr, sizeof buf, LV_DISPLAY_RENDER_MODE_FULL);
     lv_display_set_flush_cb(disp, [](lv_display_t *d, const lv_area_t *, uint8_t *) { lv_display_flush_ready(d); });
-    start();
     static lv_indev_data_t finger{};
     lv_indev_t *pointer = lv_indev_create();
     lv_indev_set_type(pointer, LV_INDEV_TYPE_POINTER);
     lv_indev_set_read_cb(pointer, [](lv_indev_t *, lv_indev_data_t *data) { *data = finger; });
+    start();
     run_ms(200);
     for (const auto &step : steps) {
         if (step.message) mac_receive(step.message);
@@ -153,7 +155,7 @@ static int run_screenshot(int argc, char **argv) {
             finger.point = step.tap;
             finger.state = LV_INDEV_STATE_PRESSED;
             run_ms(100);
-            finger.state = LV_INDEV_STATE_RELEASED;
+            if (!step.kept) finger.state = LV_INDEV_STATE_RELEASED;
         } else mac_press(step.press);
         run_ms(100);
     }

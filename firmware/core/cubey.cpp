@@ -13,6 +13,7 @@
 #include "services/lesson.h"
 #include "services/mixer.h"
 #include "services/power_button.h"
+#include "services/screen_hold.h"
 #include "services/shake.h"
 #include "services/spell.h"
 #include "services/state_report.h"
@@ -26,6 +27,7 @@
 #include "ui/dial.h"
 #include "ui/die.h"
 #include "ui/dots.h"
+#include "ui/ear.h"
 #include "ui/eyes.h"
 #include "ui/fine.h"
 #include "ui/letter.h"
@@ -88,6 +90,8 @@ static Shake shake;
 static std::optional<uint32_t> finding_since; // Cubey asked her to find something: the talk waits while she looks
 constexpr uint32_t kFindMs = 3 * 60000;
 static Upright upright;       // which way is up, from the motion sensor
+static ScreenHold screen_hold; // held to talk: a finger held on the screen is her turn
+static lv_obj_t *ear_shown = nullptr; // ...and Cubey's ear in place of its eyes while it listens
 
 // A screen of its own colour: black asleep, the theme's ground awake.
 static lv_obj_t *new_screen(uint32_t colour) {
@@ -133,7 +137,7 @@ static void sleep_screen() {
     dice.reset();
     finding_since.reset();
     spelling.reset();
-    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -150,7 +154,7 @@ static void wake_screen() {
     hal::screen(true);
     lv_obj_t *scr = new_screen(dots::ground());
     eyes_shown = eyes::create(scr);
-    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = ear_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -245,10 +249,12 @@ static void end_menu() {
     if (menu_shown) lv_obj_delete(menu_shown);
     menu_shown = nullptr;
     if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
+    voice.set_hold(settings_menu.hold());
     if (!settings_menu.to_send() || !hal::link_connected()) return;
     char msg[160];
-    snprintf(msg, sizeof msg, R"({"type":"settings","language":"%s","theme":"%s","brightness":%d,"volume":%d})", settings_menu.language().c_str(),
-             settings_menu.theme().c_str(), settings_menu.brightness(), settings_menu.volume());
+    snprintf(msg, sizeof msg, R"({"type":"settings","language":"%s","theme":"%s","brightness":%d,"volume":%d,"hold":%s})",
+             settings_menu.language().c_str(), settings_menu.theme().c_str(), settings_menu.brightness(), settings_menu.volume(),
+             settings_menu.hold() ? "true" : "false");
     hal::link_send(msg);
 }
 
@@ -426,7 +432,9 @@ static void server_message(const ServerMessage &msg, const std::string &json, ui
         if (msg.brightness) hal::brightness(brightness_shown = msg.brightness);
         if (msg.volume) hal::volume(volume_shown = msg.volume);
         if (!msg.theme.empty() && !settings_menu.is_open()) theme(msg.theme);
-        return settings_menu.known(msg.languages, {msg.language, msg.theme, msg.brightness ? msg.brightness : 100, msg.volume ? msg.volume : 100}, msg.fresh);
+        voice.set_hold(msg.hold);
+        return settings_menu.known(msg.languages, {msg.language, msg.theme, msg.brightness ? msg.brightness : 100, msg.volume ? msg.volume : 100, msg.hold},
+                                   msg.fresh);
     }
     if (!eyes_shown) return;
     if (msg.type == "menu" || msg.type == "wifi") {
@@ -498,7 +506,7 @@ static void follow_brushing(uint32_t now) {
 // shake or a tap rolls again; a long while without a roll, Cubey sleeps.
 static void follow_dice(uint32_t now, bool shaken) {
     if (!die_shown) return;
-    if (voice.is_open() && voice.state() == VoiceState::Listening) voice.close();
+    if (voice.her_turn()) voice.close();
     if (shaken) roll_die(now);
     if (!dice) return;
     die::show(die_shown, dice->frame(now));
@@ -547,7 +555,7 @@ static void show_menu() {
 
 // A grown-up asked Cubey for its menu or its Wi-Fi setup: it opens once Cubey has said so.
 static void follow_asked(uint32_t now) {
-    if (asked.empty() || (voice.is_open() && voice.state() != VoiceState::Listening)) return;
+    if (asked.empty() || (voice.is_open() && !voice.her_turn())) return;
     if (power.asleep() || settings_menu.is_open() || wifi_setup.is_open()) return asked.clear();
     if (asked == "wifi") open_wifi(false, now);
     else if (settings_menu.open(now) == SettingsMenu::Event::Opened) show_menu();
@@ -632,7 +640,7 @@ static void follow_talk(uint32_t now) {
 // back, asking whether she has finished.
 static void follow_timer(uint32_t now) {
     if (!timer) return;
-    if (voice.is_open() && voice.state() == VoiceState::Listening) voice.close();
+    if (voice.her_turn()) voice.close();
     const int news = timer->news(now);
     if (news == TimerRun::kOver) return end_timer("done");
     if (news && hal::link_connected()) {
@@ -650,6 +658,36 @@ static void follow_upright(Gravity down, uint32_t now) {
     dots::set_turn(turn);
     cards::set_turn(turn);
     lv_obj_invalidate(lv_screen_active());
+}
+
+// The finger on the screen, as the platform's touch reads it.
+static lv_indev_t *finger() {
+    for (lv_indev_t *indev = lv_indev_get_next(nullptr); indev; indev = lv_indev_get_next(indev))
+        if (lv_indev_get_type(indev) == LV_INDEV_TYPE_POINTER) return indev;
+    return nullptr;
+}
+
+// Held to talk: a finger held on the screen a moment is her turn, until it lets go (a tap is still a tap: a picture in
+// her word game). While it listens, Cubey's ear shows in place of its eyes (not over a routine's picture: the cards she
+// answers about).
+static void follow_hold(uint32_t now) {
+    lv_indev_t *indev = finger();
+    switch (screen_hold.follow(indev && lv_indev_get_state(indev) == LV_INDEV_STATE_PRESSED, now)) {
+    case ScreenHold::Event::Held: voice.press(now); break;
+    case ScreenHold::Event::Let: voice.release(now); break;
+    case ScreenHold::Event::None: break;
+    }
+    const bool listens = voice.holds() && voice.is_open() && voice.state() == VoiceState::Listening;
+    const bool show = listens && eyes_shown && !routine_shown() && !drawing_shown() && !menu_shown && !wifi_shown && !lost_shown;
+    if (ear_shown && show) return ear::show(ear_shown, now);
+    if (ear_shown) {
+        lv_obj_delete(ear_shown);
+        ear_shown = nullptr;
+        lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
+    } else if (show) {
+        ear_shown = ear::create(lv_obj_get_parent(eyes_shown), now);
+        lv_obj_set_hidden(eyes_shown, true);
+    }
 }
 
 // Follows the power button, the talk and the battery shown; with no server for 45 seconds, Cubey sleeps. The battery
@@ -680,10 +718,12 @@ static void step(lv_timer_t *) {
     follow_sketch(now);
     follow_spell(now);
     follow_upright(down, now);
+    follow_hold(now);
     if (eyes_shown) eyes::set_shut(eyes_shown, !hal::link_connected()); // nobody to talk to
 }
 
 void start() {
+    if (lv_indev_t *indev = finger()) lv_indev_set_long_press_time(indev, ScreenHold::kMs); // a tap is never a hold too
     stepping = lv_timer_create(step, kStepMs, nullptr);
     wake_screen();
 }

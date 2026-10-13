@@ -98,7 +98,21 @@ TEST_CASE("its volume, slid: 10 to 100%, in tens; changed, it is sent") {
     CHECK_FALSE(menu.to_send());
 }
 
-TEST_CASE("two pages: its language and theme, then its brightness and volume; it opens on the first") {
+TEST_CASE("how the child talks to it: hands-free, or holding its screen, tapped; changed, it is sent") {
+    SettingsMenu menu = known();
+    CHECK_FALSE(menu.hold());
+    menu.set_hold(true, 0); // closed: nothing
+    CHECK_FALSE(menu.hold());
+    hold(menu, false, 0, 5100);
+    menu.set_hold(true, 6000);
+    CHECK(menu.hold());
+    menu.confirm();
+    CHECK(menu.to_send());
+    menu.known({"en", "lv", "de", "ru"}, {"lv", "amber", 100, 100, true}, false);
+    CHECK_FALSE(menu.to_send());
+}
+
+TEST_CASE("two pages: its language and theme, then its brightness, volume and how the child talks; it opens on the first") {
     SettingsMenu menu = known();
     hold(menu, false, 0, 5100);
     CHECK(menu.page() == 0);

@@ -23,6 +23,7 @@ export type Child = {
   brightness?: number; // its Cubey's screen's, in percent (none: full)
   volume?: number; // its Cubey's speaker's, in percent (none: full)
   theme?: Theme; // its Cubey's screen's colours (none: amber)
+  hold?: boolean; // they hold its Cubey's screen as they talk (none: hands-free)
 };
 
 export function ageMonths(birthday: string, today = new Date()): number {

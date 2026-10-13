@@ -62,6 +62,12 @@ void SettingsMenu::set_volume(int percent, uint32_t now) {
     shown_.volume = std::clamp((percent + 5) / 10 * 10, 10, 100);
 }
 
+void SettingsMenu::set_hold(bool hold, uint32_t now) {
+    if (!open_) return;
+    last_ = now;
+    shown_.hold = hold;
+}
+
 void SettingsMenu::to_page(int page, uint32_t now) {
     if (!open_ || page < 0 || page > 1) return;
     last_ = now;

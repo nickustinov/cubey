@@ -24,6 +24,7 @@ ServerMessage parse_message(const std::string &json) {
     };
     out.i = whole("i");
     out.ms = whole("ms");
+    out.hold = cJSON_IsTrue(cJSON_GetObjectItem(msg, "hold")) != 0;
     if (const char *text = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "text"))) out.text = text;
     if (const char *language = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "language"))) out.language = language;
     if (const char *theme = cJSON_GetStringValue(cJSON_GetObjectItem(msg, "theme"))) out.theme = theme;

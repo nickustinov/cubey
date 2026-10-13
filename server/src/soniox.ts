@@ -40,7 +40,8 @@ const ENDPOINT = { max_endpoint_delay_ms: 1000 };
 // child to stop: onEnd is called once when she stops after saying something, or when the utterance fails
 // (finish() then rejects with the reason). also: other languages she may speak (the parrot's). waitMs: if
 // she says nothing this long, the utterance ends anyway, with nothing heard. onWords: what is heard so far, the
-// guess included, each time it changes.
+// guess included, each time it changes. hold: she holds Cubey's screen as she talks: Soniox calls no end, her turn
+// is over when she lets go (finish()).
 export class Transcriber {
   private ws: WebSocket;
   private ready: Promise<void>;
@@ -54,7 +55,8 @@ export class Transcriber {
   pauseMs = 0; // how long Soniox waited after the last word before it called the pause
 
   constructor(private opts: {
-    language: string; also?: string[]; terms?: string[]; waitMs?: number; onEnd: () => void; onWords?: (soFar: string) => void; url?: string;
+    language: string; also?: string[]; terms?: string[]; waitMs?: number; hold?: boolean; onEnd: () => void; onWords?: (soFar: string) => void;
+    url?: string;
   }) {
     this.ws = new WebSocket(opts.url ?? STT_URL);
     this.ready = opened(this.ws).then(() => {
@@ -66,8 +68,8 @@ export class Transcriber {
         num_channels: 1,
         language_hints: [opts.language, ...(opts.also ?? [])],
         ...(opts.terms?.length ? { context: { terms: opts.terms } } : {}),
-        enable_endpoint_detection: true,
-        ...ENDPOINT,
+        enable_endpoint_detection: !opts.hold,
+        ...(!opts.hold && ENDPOINT),
       }));
     });
     this.ready.catch((e) => this.fail(e));

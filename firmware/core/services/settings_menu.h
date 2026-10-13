@@ -17,15 +17,18 @@ struct Keys {
 // kHoldMs, the menu closed, is the Wi-Fi setup's: services/wifi_setup.h); so does a grown-up asking Cubey (open()). A
 // new Cubey's opens by itself, once, as the server first says its languages (offer()). Two pages: on the first, the
 // language Cubey speaks (a code from the server's list) and its screen's theme (its own list), an arrow beside each,
-// tapped, stepping it back or on, round; on the second, its screen's brightness and its volume, slid. OK closes it (as do "–" held again, the power button,
-// a minute left alone); what it shows then goes to the server if it changed, or the Cubey is new (to_send()). The
-// language its word game teaches the child chooses by asking Cubey.
-// What it sets: the language Cubey speaks, its screen's theme and brightness, and its volume (10 to 100%).
+// tapped, stepping it back or on, round; on the second, its screen's brightness and its volume, slid, and how the child
+// talks to it, hands-free or holding its screen, tapped. OK closes it (as do "–" held again, the power button, a minute
+// left alone); what it shows then goes to the server if it changed, or the Cubey is new (to_send()). The language its
+// word game teaches the child chooses by asking Cubey.
+// What it sets: the language Cubey speaks, its screen's theme and brightness, its volume (10 to 100%), and whether the
+// child holds its screen to talk (services/voice.h).
 struct Settings {
     std::string language, theme;
     int brightness = 100, volume = 100;
+    bool hold = false;
     bool operator==(const Settings &o) const {
-        return language == o.language && theme == o.theme && brightness == o.brightness && volume == o.volume;
+        return language == o.language && theme == o.theme && brightness == o.brightness && volume == o.volume && hold == o.hold;
     }
     bool operator!=(const Settings &o) const { return !(*this == o); }
 };
@@ -46,7 +49,8 @@ public:
     void step(int line, int by, uint32_t now);         // an arrow: line 0 (its language) or 1 (its theme)
     void brighten(int percent, uint32_t now);          // the brightness slid to
     void set_volume(int percent, uint32_t now);        // the volume slid to
-    void to_page(int page, uint32_t now);              // 0: its language and theme; 1: its brightness and volume
+    void set_hold(bool hold, uint32_t now);            // held to talk, or hands-free
+    void to_page(int page, uint32_t now);              // 0: its language and theme; 1: its brightness, volume and hold
     Event confirm() { return close(); }                // OK
     Event close();                                     // the power button
 
@@ -56,6 +60,7 @@ public:
     const std::string &theme() const { return shown_.theme; }
     int brightness() const { return shown_.brightness; }
     int volume() const { return shown_.volume; }
+    bool hold() const { return shown_.hold; }
     int page() const { return page_; }
     bool to_send() const { return fresh_ || shown_ != known_; }
 

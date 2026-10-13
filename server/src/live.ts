@@ -60,6 +60,7 @@ const TOOLS = [{
 export type LiveHeard = Pick<LiveServerMessage, "serverContent" | "toolCall" | "usageMetadata" | "goAway" | "sessionResumptionUpdate">;
 export type LiveLink = {
   audio(pcm: Uint8Array): void; // her mic, 16 kHz
+  end(): void; // her mic is off (she let go of Cubey's screen): Gemini ends her turn on what it heard
   note(text: string, turnComplete: boolean): void; // what happened; turnComplete: answer it now
   answer(calls: { id?: string; name?: string; result?: Record<string, unknown> }[]): void; // the tools called: a result, or silently
   close(): void;
@@ -100,6 +101,7 @@ export const connectGemini: Connect = async ({ system, language, handle, onMessa
   });
   return {
     audio: (pcm) => session.sendRealtimeInput({ audio: { data: Buffer.from(pcm).toString("base64"), mimeType: `audio/pcm;rate=${MIC_RATE}` } }),
+    end: () => session.sendRealtimeInput({ audioStreamEnd: true }),
     note: (text, turnComplete) => session.sendClientContent({ turns: [{ role: "user", parts: [{ text }] }], turnComplete }),
     // With a result, Gemini says what it learned; silently, it goes on as it was, without a word about the call.
     answer: (calls) => session.sendToolResponse({
@@ -170,6 +172,10 @@ class CubeyTalk implements Talk {
     if (!this.closed && this.link && this.mic === "off") this.mic = "overhearing";
   }
 
+  // She let go of Cubey's screen: her mic is off, and Gemini told so (it hears her pauses itself, held or not).
+  release() {
+    if (this.mic === "listening") this.send((l) => l.end());
+  }
   voice() {} // Gemini hears her over Cubey itself
   tapped() {} // ponytail: no word game on Gemini Live (its two languages are the cascade's); add one if live comes back
 

@@ -9,8 +9,9 @@ namespace {
 using dots::Dot;
 
 constexpr int kLines[2] = {5, 22};      // each line's word's first row, in small capitals; its setting a row under it
-constexpr int kPages = 39;              // the pages' dots, from this row down; a tap about them turns to the other page
-constexpr int kButton = 50;             // OK's button, from this row down
+constexpr int kSecond[3] = {2, 16, 30}; // the second page's: its brightness, its volume, how the child talks
+constexpr int kPages = 45;              // the pages' dots, from this row down; a tap about them turns to the other page
+constexpr int kButton = 51;             // OK's button, from this row down
 constexpr int kSide = 20;               // an arrow's side of a line: this many columns in from either edge
 constexpr int kTrack = 9, kSegment = 5; // a slider's ten segments: the first's column, from one to the next
 const char *const kSun[5] = {"#.#.#", ".###.", "#####", ".###.", "#.#.#"};     // the brightness's icon
@@ -37,8 +38,12 @@ Tap tap_at(int col, int row, bool first, int page) {
     }
     if (row >= kButton - 2) return {Tap::Does::Ok};
     if (row >= kPages - 4) return {Tap::Does::Page, 0, 0, 0, 1 - page};
+    if (page == 1) {
+        if (row >= kSecond[2] - 2) return {Tap::Does::Hold}; // either way: there are two
+        const int percent = std::clamp((col - kTrack) / kSegment + 1, 1, 10) * 10;
+        return {row >= kSecond[1] - 2 ? Tap::Does::Volume : Tap::Does::Brightness, 0, 0, percent};
+    }
     const int line = row >= kLines[1] - 2 ? 1 : 0;
-    if (page == 1) return {line ? Tap::Does::Volume : Tap::Does::Brightness, 0, 0, std::clamp((col - kTrack) / kSegment + 1, 1, 10) * 10};
     if (col < kSide) return {Tap::Does::Step, line, -1};
     if (col >= fine::kBoard - kSide) return {Tap::Does::Step, line, 1};
     return {};
@@ -64,6 +69,15 @@ static fine::Frame paint_first(const SettingsMenu &menu) {
     return f;
 }
 
+// A line at `top`: what it is, small, over its setting in capitals, an arrow either side.
+static void choice(fine::Frame &f, const char *word, const std::string &setting, int top) {
+    fine::centred(f, fine::small(word), top, 1, Dot::Half);
+    const int y = top + 5 - font::kCapitalTop; // its capitals (the font's rows 3 to 8), a row under the word's four
+    fine::centred(f, setting, y, 1, Dot::On);
+    fine::write(f, fine::text("◀"), 3, y, 1, Dot::Half);
+    fine::write(f, fine::text("▶"), fine::kBoard - 3 - fine::text("▶").wide(1), y, 1, Dot::Half);
+}
+
 // A slider at `top`, under its word: its icon, then ten segments, lit as far as it goes.
 static void slider(fine::Frame &f, const char *word, const char *const icon[5], int top, int percent) {
     fine::centred(f, fine::small(word), top, 1, Dot::Half);
@@ -80,18 +94,12 @@ fine::Frame paint(const SettingsMenu &menu) {
     fine::Frame f;
     f.fill(Dot::Off);
     if (menu.page() == 0) {
-        const char *words[2] = {"speaks", "theme"};
-        const std::string *settings[2] = {&menu.language(), &menu.theme()};
-        for (int line = 0; line < 2; line++) {
-            fine::centred(f, fine::small(words[line]), kLines[line], 1, Dot::Half);
-            const int y = kLines[line] + 5 - font::kCapitalTop; // its capitals (the font's rows 3 to 8), a row under the word's four
-            fine::centred(f, capitals(*settings[line]), y, 1, Dot::On);
-            fine::write(f, fine::text("◀"), 3, y, 1, Dot::Half);
-            fine::write(f, fine::text("▶"), fine::kBoard - 3 - fine::text("▶").wide(1), y, 1, Dot::Half);
-        }
+        choice(f, "speaks", capitals(menu.language()), kLines[0]);
+        choice(f, "theme", capitals(menu.theme()), kLines[1]);
     } else {
-        slider(f, "brightness", kSun, kLines[0], menu.brightness());
-        slider(f, "volume", kSpeaker, kLines[1], menu.volume());
+        slider(f, "brightness", kSun, kSecond[0], menu.brightness());
+        slider(f, "volume", kSpeaker, kSecond[1], menu.volume());
+        choice(f, "talk", menu.hold() ? "HOLD" : "FREE", kSecond[2]);
     }
     // Its pages: a dot each, this one lit, an arrow towards the other.
     for (int page = 0; page < 2; page++)
@@ -99,7 +107,7 @@ fine::Frame paint(const SettingsMenu &menu) {
             for (int x = 0; x < 3; x++) fine::set(f, 25 + 7 * page + x, row, page == menu.page() ? Dot::On : Dot::Dim);
     if (menu.page() == 0) fine::write(f, fine::text(">"), 38, kPages - 5, 1, Dot::Half);
     else fine::write(f, fine::text("<"), 18, kPages - 5, 1, Dot::Half);
-    ok(f, kButton, 9);
+    ok(f, kButton, 8);
     return f;
 }
 
@@ -118,6 +126,7 @@ static void touched(lv_event_t *e) {
     case Tap::Does::Step: menu->step(tap.line, tap.by, now); break;
     case Tap::Does::Brightness: menu->brighten(tap.percent, now); break;
     case Tap::Does::Volume: menu->set_volume(tap.percent, now); break;
+    case Tap::Does::Hold: menu->set_hold(!menu->hold(), now); break;
     case Tap::Does::Page: menu->to_page(tap.page, now); break;
     case Tap::Does::Ok: menu->confirm(); break;
     case Tap::Does::Nothing: break;

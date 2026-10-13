@@ -12,7 +12,8 @@ namespace cubey {
 // letters, small), and for "spell.at" which of its letters (i) is said how far into Cubey's speech (ms; both -1 for
 // none); for "show" a picture's rows or text; for
 // "settings" the language Cubey speaks, all it speaks, whether it is a new Cubey, not set up
-// (the grown-ups' menu), the screen's brightness and the speaker's volume in percent (0: not said) and its theme (ui/dots.h; none: not said).
+// (the grown-ups' menu), the screen's brightness and the speaker's volume in percent (0: not said), its theme
+// (ui/dots.h; none: not said) and whether the child holds its screen to talk.
 struct ServerMessage {
     std::string type; // "" for anything that isn't a message
     bool last = false;
@@ -31,6 +32,7 @@ struct ServerMessage {
     int brightness = 0, volume = 0;
     std::string theme;
     int i = -1, ms = -1;
+    bool hold = false;
 };
 
 ServerMessage parse_message(const std::string &json);

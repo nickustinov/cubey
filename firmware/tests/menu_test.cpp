@@ -24,32 +24,45 @@ TEST_CASE("the menu's first page: two lines, each what it is in small capitals o
     CHECK(lit(f, 10, 16, 50, 60, Dot::Half) > 0); // ▶
     CHECK(lit(f, 22, 26, 10, 50, Dot::Half) > 0); // THEME
     CHECK(lit(f, 27, 33, 12, 48, Dot::On) > 0);   // GREEN
-    CHECK(lit(f, 33, 37, 0, 60, Dot::On) + lit(f, 33, 37, 0, 60, Dot::Half) == 0); // room above its pages
-    CHECK(lit(f, 39, 42, 25, 28, Dot::On) == 9);  // this page's dot
-    CHECK(lit(f, 39, 42, 32, 35, Dot::Dim) == 9); // the other's
-    CHECK(lit(f, 34, 44, 38, 43, Dot::Half) > 0); // > towards it
-    CHECK(lit(f, 44, 50, 0, 60, Dot::On) + lit(f, 44, 50, 0, 60, Dot::Dim) == 0); // room above OK
-    CHECK(lit(f, 50, 60, 18, 42, Dot::Dim) > 0);  // OK's button
-    CHECK(lit(f, 50, 60, 18, 42, Dot::On) > 0);   // OK
+    CHECK(lit(f, 33, 42, 0, 60, Dot::On) + lit(f, 33, 42, 0, 60, Dot::Half) == 0); // room above its pages
+    CHECK(lit(f, 45, 48, 25, 28, Dot::On) == 9);  // this page's dot
+    CHECK(lit(f, 45, 48, 32, 35, Dot::Dim) == 9); // the other's
+    CHECK(lit(f, 40, 50, 38, 43, Dot::Half) > 0); // > towards it
+    CHECK(lit(f, 48, 51, 0, 60, Dot::On) + lit(f, 48, 51, 0, 60, Dot::Dim) == 0); // room above OK
+    CHECK(lit(f, 51, 60, 18, 42, Dot::Dim) > 0);  // OK's button
+    CHECK(lit(f, 51, 60, 18, 42, Dot::On) > 0);   // OK
 }
 
-TEST_CASE("its second page: its brightness and its volume, each under its word, its icon beside ten segments lit as far as it goes") {
+TEST_CASE("its second page: its brightness and its volume, each under its word, its icon beside ten segments lit as far "
+          "as it goes; under them how the child talks, an arrow either side") {
     SettingsMenu menu({"amber", "green"});
-    menu.known({"en", "lv"}, {"lv", "green", 50, 30}, false);
+    menu.known({"en", "lv"}, {"lv", "green", 50, 30, true}, false);
     REQUIRE(menu.open(0) == SettingsMenu::Event::Opened);
     menu.to_page(1, 0);
     const fine::Frame f = menu::paint(menu);
-    CHECK(lit(f, 5, 9, 5, 55, Dot::Half) > 0);    // BRIGHTNESS
-    CHECK(lit(f, 11, 16, 0, 7, Dot::Half) > 0);   // a sun
-    CHECK(lit(f, 12, 15, 9, 60, Dot::On) == lit(f, 12, 15, 9, 60, Dot::Dim)); // half of it lit
-    CHECK(lit(f, 22, 26, 10, 50, Dot::Half) > 0); // VOLUME
-    CHECK(lit(f, 28, 33, 0, 7, Dot::Half) > 0);   // a speaker
-    CHECK(lit(f, 29, 32, 9, 60, Dot::On) * 7 == lit(f, 29, 32, 9, 60, Dot::Dim) * 3); // 30%
-    CHECK(lit(f, 39, 42, 32, 35, Dot::On) == 9);  // this page's dot
-    CHECK(lit(f, 34, 44, 17, 23, Dot::Half) > 0); // < towards the first
+    CHECK(lit(f, 2, 6, 5, 55, Dot::Half) > 0);    // BRIGHTNESS
+    CHECK(lit(f, 8, 13, 0, 7, Dot::Half) > 0);    // a sun
+    CHECK(lit(f, 9, 12, 9, 60, Dot::On) == lit(f, 9, 12, 9, 60, Dot::Dim)); // half of it lit
+    CHECK(lit(f, 16, 20, 10, 50, Dot::Half) > 0); // VOLUME
+    CHECK(lit(f, 22, 27, 0, 7, Dot::Half) > 0);   // a speaker
+    CHECK(lit(f, 23, 26, 9, 60, Dot::On) * 7 == lit(f, 23, 26, 9, 60, Dot::Dim) * 3); // 30%
+    CHECK(lit(f, 30, 34, 10, 50, Dot::Half) > 0); // TALK
+    CHECK(lit(f, 34, 41, 15, 45, Dot::On) > 0);   // HOLD
+    CHECK(lit(f, 34, 41, 0, 10, Dot::Half) > 0);  // ◀
+    CHECK(lit(f, 34, 41, 50, 60, Dot::Half) > 0); // ▶
+    CHECK(lit(f, 41, 43, 0, 60, Dot::On) + lit(f, 41, 43, 0, 60, Dot::Half) == 0); // room above its pages
+    CHECK(lit(f, 45, 48, 32, 35, Dot::On) == 9);  // this page's dot
+    CHECK(lit(f, 40, 50, 17, 23, Dot::Half) > 0); // < towards the first
+
+    menu.set_hold(false, 0);
+    const fine::Frame free = menu::paint(menu);
+    CHECK(lit(free, 34, 41, 15, 45, Dot::On) > 0); // FREE
+    CHECK(free != f);
+    CHECK(lit(free, 0, 34, 0, 60, Dot::On) == lit(f, 0, 34, 0, 60, Dot::On));
 }
 
-TEST_CASE("a tap: on an arrow's side of a line, a step back or on; on a slider, as far along; about the dots, the other page; at the bottom, OK") {
+TEST_CASE("a tap: on an arrow's side of a line, a step back or on; on a slider, as far along; on how she talks, the other "
+          "way; about the dots, the other page; at the bottom, OK") {
     using Does = menu::Tap::Does;
     const auto step = [](int col, int row, int line, int by) {
         const menu::Tap t = menu::tap_at(col, row, false, 0);
@@ -62,15 +75,18 @@ TEST_CASE("a tap: on an arrow's side of a line, a step back or on; on a slider, 
     step(5, 28, 1, -1);
     step(55, 28, 1, 1);
     CHECK(menu::tap_at(30, 12, false, 0).does == Does::Nothing);
-    CHECK(menu::tap_at(30, 40, false, 0).does == Does::Page);
-    CHECK(menu::tap_at(30, 40, false, 0).page == 1);
-    CHECK(menu::tap_at(30, 40, false, 1).page == 0);
+    CHECK(menu::tap_at(30, 44, false, 0).does == Does::Page);
+    CHECK(menu::tap_at(30, 44, false, 0).page == 1);
+    CHECK(menu::tap_at(30, 44, false, 1).page == 0);
     CHECK(menu::tap_at(9, 13, false, 1).does == Does::Brightness);
     CHECK(menu::tap_at(9, 13, false, 1).percent == 10);
     CHECK(menu::tap_at(31, 13, false, 1).percent == 50);
     CHECK(menu::tap_at(2, 13, false, 1).percent == 10); // the sun's side: the dimmest
-    CHECK(menu::tap_at(59, 30, false, 1).does == Does::Volume);
-    CHECK(menu::tap_at(59, 30, false, 1).percent == 100);
+    CHECK(menu::tap_at(59, 24, false, 1).does == Does::Volume);
+    CHECK(menu::tap_at(59, 24, false, 1).percent == 100);
+    CHECK(menu::tap_at(5, 37, false, 1).does == Does::Hold);
+    CHECK(menu::tap_at(30, 37, false, 1).does == Does::Hold); // anywhere on its line: there are two ways
+    CHECK(menu::tap_at(30, 37, false, 0).does == Does::Nothing); // on the first page, between its theme's arrows
     CHECK(menu::tap_at(30, 55, false, 0).does == Does::Ok);
     CHECK(menu::tap_at(30, 55, false, 1).does == Does::Ok);
 }

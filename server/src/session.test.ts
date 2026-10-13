@@ -14,7 +14,8 @@ function session(talkOver?: boolean) {
   let hearing = false;
   let out: TalkOut | undefined;
   const talk: Talk = {
-    listen: () => void did.push("listen"),
+    listen: (hold) => void did.push(hold ? "listen hold" : "listen"),
+    release: () => void did.push("release"),
     overhear: () => void did.push("overhear"),
     voice: () => void did.push("voice"),
     hearing: () => hearing,
@@ -24,7 +25,7 @@ function session(talkOver?: boolean) {
     tapped: (id) => void did.push(`tapped ${id}`),
     close: () => void did.push("close"),
   };
-  const settings = { language: "lv", new: true, brightness: 100, volume: 100, theme: "green" };
+  const settings = { language: "lv", new: true, brightness: 100, volume: 100, theme: "green", hold: false };
   const s = new Session({
     child: () => anna,
     settings: {
@@ -60,16 +61,18 @@ test("the device hears whether she may talk over Cubey as it says hello: yes, un
 test("to its hello the device hears its languages for its menu; the menu's change is kept, the talk opening anew in it", () => {
   const t = session();
   t.s.onText(JSON.stringify({ type: "hello", speaker_rate: 16000 }));
-  expect(t.sent[1]).toEqual({ type: "settings", language: "lv", new: true, brightness: 100, volume: 100, theme: "green", languages: ["en", "fr", "de", "es", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "et", "ru", "uk", "lv", "lt"] });
+  expect(t.sent[1]).toEqual({ type: "settings", language: "lv", new: true, brightness: 100, volume: 100, theme: "green", hold: false, languages: ["en", "fr", "de", "es", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "et", "ru", "uk", "lv", "lt"] });
   t.s.onText(JSON.stringify({ type: "open" }));
   t.s.onText(JSON.stringify({ type: "settings", language: "en" }));
   expect(t.settings).toMatchObject({ language: "en", new: false });
   expect(t.did).toEqual(["close"]); // the talk in the old language
-  expect(t.sent.at(-1)).toEqual({ type: "settings", language: "en", new: false, brightness: 100, volume: 100, theme: "green", languages: ["en", "fr", "de", "es", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "et", "ru", "uk", "lv", "lt"] });
+  expect(t.sent.at(-1)).toEqual({ type: "settings", language: "en", new: false, brightness: 100, volume: 100, theme: "green", hold: false, languages: ["en", "fr", "de", "es", "it", "pt", "nl", "pl", "sv", "da", "no", "fi", "et", "ru", "uk", "lv", "lt"] });
   t.s.onText(JSON.stringify({ type: "settings", language: "xx" })); // refused: as it was
   expect(t.settings).toMatchObject({ language: "en", new: false });
   t.s.onText(JSON.stringify({ type: "settings", language: "en", theme: "white", brightness: 40 })); // its theme and brightness, from its menu
   expect(t.settings).toMatchObject({ theme: "white", brightness: 40 });
+  t.s.onText(JSON.stringify({ type: "settings", language: "en", hold: true })); // she holds its screen to talk
+  expect(t.settings).toMatchObject({ hold: true });
 });
 
 test("asked for another colour: kept, and to the device with its settings, the talk going on", () => {
@@ -112,6 +115,14 @@ test("its turns go to the talk: listening, talking over it, a stop, and the mic 
   t.s.onText(JSON.stringify({ type: "voice" }));
   t.s.onText(JSON.stringify({ type: "stop" }));
   expect(t.did).toEqual(["listen", "audio 640", "overhear", "voice", "stop"]);
+});
+
+test("she holds its screen as she talks: it listens until she lets go", () => {
+  const t = session();
+  t.s.onText(JSON.stringify({ type: "open" }));
+  t.s.onText(JSON.stringify({ type: "listen", hold: true }));
+  t.s.onText(JSON.stringify({ type: "release" }));
+  expect(t.did).toEqual(["listen hold", "release"]);
 });
 
 test("the talk's messages and speech reach the device as they are", () => {

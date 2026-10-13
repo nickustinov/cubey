@@ -165,7 +165,7 @@ void choose(std::vector<LessonPicture> choose) {
         image(option, std::move(picture.png));
         // Its id rides along in the event's user data: freed with the card.
         auto *id = new std::string(std::move(picture.id));
-        lv_obj_add_event_cb(option, on_tapped, LV_EVENT_CLICKED, id);
+        lv_obj_add_event_cb(option, on_tapped, LV_EVENT_SHORT_CLICKED, id); // a hold is her talking (services/screen_hold.h)
         lv_obj_add_event_cb(option, [](lv_event_t *e) { delete static_cast<std::string *>(lv_event_get_user_data(e)); }, LV_EVENT_DELETE, id);
     }
     lay_out();

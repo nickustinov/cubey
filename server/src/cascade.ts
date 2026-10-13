@@ -44,8 +44,11 @@ export type Voice = { say(text: string, language?: string): Promise<void>; end()
 export type CascadeDeps = {
   history: { recent(child: string): Earlier[] };
   // onHeard: her turn is over, or listening failed; onWords: what is heard so far; also: another language she may
-  // speak; waitMs: nothing said this long, her turn is over all the same, with nothing heard
-  listen: (opts: { child: Child; onHeard: () => void; onWords?: (soFar: string) => void; also?: string[]; waitMs?: number }) => Listener;
+  // speak; waitMs: nothing said this long, her turn is over all the same, with nothing heard; hold: she holds Cubey's
+  // screen as she talks, her turn over when she lets go (finish), never at a pause
+  listen: (opts: {
+    child: Child; onHeard: () => void; onWords?: (soFar: string) => void; also?: string[]; waitMs?: number; hold?: boolean;
+  }) => Listener;
   // timestamps: whether to time what it says, asked with its first words; onCharacters: what it says as it times it
   speak: (opts: {
     voice: (language: string) => string; speed: number; language: string; sampleRate: number; onAudio: (pcm: Buffer) => void;
@@ -79,6 +82,7 @@ export const TALK_OVER_WORD_MS = 2000;
 class CascadeTalk implements Talk {
   private generation = 0; // bumped by every stop; what an older turn would still send is dropped
   private listener?: Listener; // her turn
+  private held = false; // ...as she holds Cubey's screen: over when she lets go
   private overhearing = false; // Cubey speaks, the device streams the mic: the moment before she talks over it
   private recent: Uint8Array[] = [];
   private doubted?: ReturnType<typeof setTimeout>; // her voice over Cubey, not yet a word
@@ -111,23 +115,30 @@ class CascadeTalk implements Talk {
     void this.answer(opened.note ?? helloNote(child, !deps.history.recent(child.id).length), true, this.generation);
   }
 
-  listen() {
+  listen(hold = false) {
     if (this.closed) return;
     this.hush();
     this.out.text({ type: "listening" });
+    this.held = hold;
     this.hear();
   }
 
+  // She let go of Cubey's screen: her turn is over.
+  release() {
+    if (this.listener) void this.heard(this.listener, this.generation);
+  }
+
   // Her turn: Soniox hears it to its end (in the word game, the language taught too, and her turn ends when she says
-  // nothing). echo: Cubey's words she talked over, left out of what she said before hers.
+  // nothing; held, when she lets go). echo: Cubey's words she talked over, left out of what she said before hers.
   // onWord: her first word, over Cubey's speech.
   private hear(echo?: Set<string>, onWord?: () => void): Listener {
-    const lesson = this.lesson;
+    const lesson = this.lesson, hold = this.held;
     const listener: Listener = (this.listener = this.deps.listen({
       child: this.child,
       onHeard: () => void (this.listener === listener && this.heard(listener, this.generation, echo)),
       ...(onWord && { onWords: (soFar: string) => void (this.listener === listener && soFar.trim() && onWord()) }),
-      ...(lesson && { also: [lesson.language], ...(!lesson.nudged && { waitMs: NUDGE_MS }) }),
+      ...(lesson && { also: [lesson.language], ...(!lesson.nudged && !hold && { waitMs: NUDGE_MS }) }),
+      ...(hold && { hold }),
     }));
     return listener;
   }
@@ -233,7 +244,8 @@ class CascadeTalk implements Talk {
     this.recentBytes = 0;
   }
 
-  // She paused: her words, then Cubey's answer; nothing said, the device listens again.
+  // She paused (or let go): her words, then Cubey's answer; nothing said, the device listens again (held, it waits for
+  // her: she talks when she holds it, so Cubey never asks once more in the word game).
   // echo: the words of the speech she talked over, left out of what she said before hers
   private async heard(listener: Listener, generation: number, echo?: Set<string>) {
     this.listener = undefined;
@@ -247,7 +259,7 @@ class CascadeTalk implements Talk {
       return;
     }
     if (generation !== this.generation) return;
-    if (this.lesson && (heard || !this.lesson.nudged)) return this.lessonTurn(heard ? { said: heard } : { quiet: true }, generation);
+    if (this.lesson && (heard || !(this.lesson.nudged || this.held))) return this.lessonTurn(heard ? { said: heard } : { quiet: true }, generation);
     if (!heard) return this.out.text({ type: "said", heard: "", said: "", last: false });
     await this.answer(heard, false, generation, listener.pauseMs);
   }

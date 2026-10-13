@@ -232,6 +232,7 @@ ${modelsForm()}`);
 <label>Brightness</label>${select("brightness", String(child.brightness ?? 100), percents)}
 <label>Volume</label>${select("volume", String(child.volume ?? 100), percents)}
 <label>Theme</label>${select("theme", child.theme ?? "amber", THEMES.map((t) => [t, t === "vfd" ? "VFD" : t[0].toUpperCase() + t.slice(1)]))}
+<label>Talking</label>${select("hold", child.hold ? "yes" : "", [["", "hands-free"], ["yes", "holding its screen"]])}
 <label>At home</label>${select("parents", child.parents, PARENTS.map((p) => [p, p.replace("_", " and ")]))}
 <label>Time zone</label><input name="timeZone" value="${h(child.timeZone)}">
 <label>Blocked</label><input type="checkbox" name="blocked"${device.blocked ? " checked" : ""} style="width:auto">
@@ -250,7 +251,7 @@ ${modelsForm()}`);
     fleet.memory(id).edit({
       name: field("name"), gender: field("gender"), age: field("age"), language: field("language"), learns: field("learns"),
       parents: field("parents"), timeZone: field("timeZone"), brightness: field("brightness"), volume: field("volume"),
-      theme: field("theme"),
+      theme: field("theme"), hold: field("hold"),
     }, now());
     deps.changed?.(id);
     return redirect(`/admin/d/${encodeURIComponent(id)}`);

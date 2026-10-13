@@ -35,6 +35,7 @@ async function talk(opened: Opened = {}, earlier = before, battery: Battery | nu
     connections.push({ system, language, handle, tell: onMessage, drop: onClose });
     return {
       audio: (pcm) => void sent.push({ audio: pcm.length }),
+      end: () => void sent.push("end"),
       note: (text, turnComplete) => void sent.push({ note: text, turnComplete }),
       answer: (calls) => void sent.push({ answered: calls.map((c) => (c.result ? [c.name, c.result] : c.name)) }),
       close: () => (sent.push("close"), onClose("closed 1000")), // as Gemini's: closing it closes it
@@ -102,6 +103,23 @@ test("she talks: her mic goes to Gemini, the first of its answer tells the devic
   await t.gemini(over);
   expect(t.texts.at(-1)).toEqual({ type: "said", heard: "Kāpēc debesis ir zilas?", said: "Jo saule izkliedē zilo.", last: false });
   expect(t.exchanges.at(-1)).toEqual({ heard: "Kāpēc debesis ir zilas?", said: "Jo saule izkliedē zilo.", forParents: false });
+});
+
+test("she lets go of its screen (held to talk): Gemini hears her mic has ended, for her turn to end; nobody listening, nothing", async () => {
+  const t = await talk();
+  await t.gemini(speech("Čau!"), over);
+  t.live.listen(true);
+  await Bun.sleep(1);
+  t.live.audio(new Uint8Array(640));
+  t.live.release();
+  await Bun.sleep(1);
+  expect(t.sent.slice(-2)).toEqual([{ audio: 640 }, "end"]);
+  await t.gemini(speech("Jā?"));
+  expect(t.types()).toEqual(["said", "listening", "heard"]); // its answer, to her
+  const sent = t.sent.length;
+  t.live.release();
+  await Bun.sleep(1);
+  expect(t.sent.length).toBe(sent);
 });
 
 test("its goodbye and the parents' questions come as calls, answered silently; the goodbye ends the link", async () => {

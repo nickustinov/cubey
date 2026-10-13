@@ -84,6 +84,20 @@ test("its volume, asked for by voice, or set on its menu or the admin page: 10 t
   expect(memory.edit({ volume: "" }, today).volume).toBeUndefined();
 });
 
+test("how the child talks to it, set on its menu or the admin page: holding its screen, or hands-free (none)", () => {
+  const memory = new Memory(file(), "Anna");
+  expect(memory.child(today).hold).toBeUndefined();
+  memory.set({ language: "lv", hold: true });
+  expect(new Memory(memory["path"], "Anna").child(today).hold).toBe(true);
+  expect(readFileSync(memory["path"], "utf8")).toContain("- Hold to talk: yes\n");
+  memory.set({ language: "lv" }); // a menu that doesn't say: as it was
+  expect(memory.child(today).hold).toBe(true);
+  memory.set({ language: "lv", hold: false });
+  expect(memory.child(today).hold).toBeUndefined();
+  expect(memory.edit({ hold: "yes" }, today).hold).toBe(true);
+  expect(memory.edit({ hold: "" }, today).hold).toBeUndefined();
+});
+
 test("the screen's brightness, a grown-up's (by voice, or on the admin page): 10 to 100 percent; none, full", () => {
   const memory = new Memory(file(), "Anna");
   expect(memory.child(today).brightness).toBeUndefined();

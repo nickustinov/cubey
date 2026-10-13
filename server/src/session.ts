@@ -1,11 +1,14 @@
 // One connected device, over its WebSocket: Cubey's talk with the child (live.ts). It wakes to Cubey's hello, then
-// listens hands-free and Cubey answers, until a goodbye (hers, said back by Cubey) or a quiet while puts it to sleep.
+// listens hands-free (or while she holds its screen) and Cubey answers, until a goodbye (hers, said back by Cubey) or
+// a quiet while puts it to sleep.
 //   device -> server: {"type":"hello", speaker_rate}  the rate it plays speech at
 //                     {"type":"open", again?, timer?, for?, dice?}   Cubey woke: its hello; again: the device lost the
 //                                                       server mid-talk and goes on, without a hello; timer: "done"
 //                                                       or "stopped", the timer for `for` is, and Cubey says so
 //                                                       instead; dice: "stopped", put away with the button
-//                     {"type":"listen"}, then mic PCM   she may talk (16 kHz mono)
+//                     {"type":"listen", hold?}, then mic PCM   she may talk (16 kHz mono); hold: she holds its
+//                                                       screen as she talks, her turn over when she lets go
+//                     {"type":"release"}                she let go of its screen: her turn is over
 //                     {"type":"overhear"}, then mic PCM Cubey's speech plays: she may talk over it
 //                     {"type":"voice"}                  its own detector heard her voice over Cubey's speech
 //                     {"type":"stop"}                   what Cubey is saying is dropped (an answer that never came)
@@ -21,16 +24,18 @@
 //                     {"type":"lesson.stopped"}         her word game: she stopped it (the button)
 //                     {"type":"dice.rolled", n}         the die landed on n (1–6): Cubey says it, once, nobody
 //                                                       listening (no talk while the die is out)
-//   device -> server: {"type":"settings", language, theme, brightness, volume}   its menu: the language Cubey
-//                                                       speaks, its screen's theme and brightness, its volume (memory.ts); the talk
+//   device -> server: {"type":"settings", language, theme, brightness, volume, hold}   its menu: the language Cubey
+//                                                       speaks, its screen's theme and brightness, its volume, whether
+//                                                       she holds its screen to talk (memory.ts); the talk
 //                                                       opens anew in it (the language its word game teaches, the
 //                                                       child chooses by asking Cubey)
-//   server -> device: {"type":"settings", language, languages, new, brightness, volume, theme}   to its hello, and
+//   server -> device: {"type":"settings", language, languages, new, brightness, volume, theme, hold}   to its hello, and
 //                                                       once they are set: for its menu, with the languages Cubey
 //                                                       speaks; new: not set up yet, its menu opens by itself;
 //                                                       brightness: its screen's, in percent (10–100), a grown-up's;
 //                                                       volume: its speaker's, in percent (10–100);
 //                                                       theme: its screen's colours (its menu, the admin page)
+//                                                       hold: she holds its screen to talk (false: hands-free)
 //   server -> device: {"type":"talk_over", on}          to its hello: whether she may talk over Cubey (CUBEY_TALK_OVER);
 //                                                       off, the mic rests while Cubey speaks and nothing ducks it
 //                     {"type":"listening"}              every listen's
@@ -82,9 +87,10 @@ import type { Exchanged } from "./log";
 import type { Learned } from "./memory";
 import type { Spent } from "./prices";
 
-export type Settings = { language: string; theme?: string };
+// hold: she holds its screen to talk, or hands-free
+export type Settings = { language: string; theme?: string; hold?: boolean };
 // new: a new Cubey's, not set up yet; theme: its screen's colours (child.ts)
-export type Known = Settings & { new: boolean; brightness: number; volume: number; theme: string };
+export type Known = Settings & { new: boolean; brightness: number; volume: number; theme: string; hold: boolean };
 export type SessionDeps = {
   child: () => Child;
   // what the device's menu sets, and the brightness, volume and theme asked of Cubey (memory.ts)
@@ -115,7 +121,7 @@ export class Session {
     let msg: {
       type?: unknown; speaker_rate?: unknown; again?: unknown; battery?: unknown; charging?: unknown; part?: unknown; timer?: unknown;
       for?: unknown; minutes?: unknown; id?: unknown; dice?: unknown; n?: unknown; language?: unknown; theme?: unknown;
-      brightness?: unknown; volume?: unknown;
+      brightness?: unknown; volume?: unknown; hold?: unknown;
     };
     try {
       msg = JSON.parse(raw);
@@ -128,7 +134,9 @@ export class Session {
         this.deps.send.text({ type: "talk_over", on: this.deps.talkOver !== false });
         return this.sendSettings();
       case "settings":
-        if (!this.deps.settings.set({ language: String(msg.language), ...(typeof msg.theme === "string" && { theme: msg.theme }) })) return;
+        if (!this.deps.settings.set({
+          language: String(msg.language), ...(typeof msg.theme === "string" && { theme: msg.theme }), ...(typeof msg.hold === "boolean" && { hold: msg.hold }),
+        })) return;
         if (typeof msg.brightness === "number") this.deps.settings.brighten(msg.brightness);
         if (typeof msg.volume === "number") this.deps.settings.turn(msg.volume);
         this.talk?.close(); // in the language before: the device opens it anew
@@ -143,7 +151,9 @@ export class Session {
         return;
       case "listen":
         if (!this.talk) return this.deps.send.text({ type: "failed", reason: "no talk" });
-        return this.talk.listen();
+        return this.talk.listen(msg.hold === true);
+      case "release":
+        return this.talk?.release();
       case "overhear":
         return this.talk?.overhear();
       case "voice":

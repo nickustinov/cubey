@@ -34,7 +34,7 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   };
   const listeners: {
     pcm: number; onHeard: () => void; onWords?: (soFar: string) => void; onPause?: unknown; text: string; cancelled: boolean;
-    also?: string[]; waitMs?: number;
+    also?: string[]; waitMs?: number; hold?: boolean;
   }[] = [];
   const voices: { said: string[]; languages: (string | undefined)[]; cancelled: boolean; rate: number; speed: number; timed: boolean }[] = [];
   const played: Buffer[] = []; // what the device was sent of Cubey's voice
@@ -45,8 +45,8 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
   const deps: CascadeDeps = {
     history: { recent: () => before },
     listen: (opts) => {
-      const { onHeard, onWords, also, waitMs } = opts;
-      const l = { pcm: 0, onHeard, onWords, onPause: (opts as { onPause?: unknown }).onPause, text: heardNext, cancelled: false, also, waitMs };
+      const { onHeard, onWords, also, waitMs, hold } = opts;
+      const l = { pcm: 0, onHeard, onWords, onPause: (opts as { onPause?: unknown }).onPause, text: heardNext, cancelled: false, also, waitMs, hold };
       listeners.push(l);
       return { send: (pcm) => void (l.pcm += pcm.length), finish: async () => l.text, cancel: () => void (l.cancelled = true) };
     },
@@ -100,8 +100,17 @@ async function talk(opened: Opened = {}, answers: string[] = [json("Čau, Anna!"
     listeners.at(-1)!.onHeard();
     await Bun.sleep(5);
   };
+  // ...holding its screen as she talks: her turn is over when she lets go.
+  const hold = async (heard = "Kāpēc debesis ir zilas?", ...answer: string[]) => {
+    answers.push(...answer);
+    heardNext = heard;
+    live.listen(true);
+    live.audio(new Uint8Array(640));
+    live.release();
+    await Bun.sleep(5);
+  };
   const types = () => texts.map((t) => t.type);
-  return { live, ask, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, turned, coloured, logged, played };
+  return { live, ask, hold, texts, types, exchanges, asked, listeners, voices, audio: () => audio, answers, deps, learned, spent, brightened, turned, coloured, logged, played };
 }
 
 test("Cubey's hello: the model is told what happened, in Cubey's prompt with its battery, and its words are spoken as written", async () => {
@@ -159,6 +168,17 @@ test("a pause with nothing said: the device listens on, the model isn't asked", 
   await t.ask("");
   expect(t.texts.at(-1)).toEqual({ type: "said", heard: "", said: "", last: false });
   expect(t.asked.length).toBe(1);
+});
+
+test("she holds its screen as she talks: Soniox calls no pause, her letting go ends her turn, and Cubey answers", async () => {
+  const t = await talk();
+  await t.hold("Kāpēc debesis ir zilas?", json("Jo saule izkliedē zilo."));
+  expect(t.listeners[0].hold).toBe(true);
+  expect(t.types()).toEqual(["said", "listening", "heard", "said"]);
+  expect(t.texts.at(-1)).toEqual({ type: "said", heard: "Kāpēc debesis ir zilas?", said: "Jo saule izkliedē zilo.", last: false });
+  t.live.release(); // nobody listening: nothing
+  await Bun.sleep(5);
+  expect(t.types().length).toBe(4);
 });
 
 test("its goodbye ends the talk; a question for her parents is marked for them", async () => {
@@ -353,6 +373,16 @@ test("in the word game she says nothing: the step once more, then Cubey waits fo
   expect(t.asked.length).toBe(asked);
   expect(t.texts.at(-1)).toEqual({ type: "said", heard: "", said: "", last: false });
   expect(t.types()).not.toContain("lesson.end");
+});
+
+test("in the word game, holding its screen: she talks when she holds it, so Cubey never asks once more; let go with nothing said, it waits", async () => {
+  const t = await playing();
+  await t.hold("Jā!", step("{Hello}!"));
+  expect(t.listeners.at(-1)!.waitMs).toBeUndefined();
+  const asked = t.asked.length;
+  await t.hold("");
+  expect(t.asked.length).toBe(asked);
+  expect(t.texts.at(-1)).toEqual({ type: "said", heard: "", said: "", last: false });
 });
 
 test("in the word game a tap is her answer: the device hears it as her pause, and the game goes on", async () => {

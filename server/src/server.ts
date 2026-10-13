@@ -66,8 +66,8 @@ const talks = TALK === "live"
   ? liveTalks({ history, log })
   : cascadeTalks({
     history, log, complete: modelFor("talk"), games: modelFor("games"), draw: modelFor("drawing"),
-    listen: ({ child, onHeard, onWords, also, waitMs }) =>
-      new Transcriber({ language: child.language, also, waitMs, terms: child.name ? [child.name] : [], onEnd: onHeard, onWords }),
+    listen: ({ child, onHeard, onWords, also, waitMs, hold }) =>
+      new Transcriber({ language: child.language, also, waitMs, hold, terms: child.name ? [child.name] : [], onEnd: onHeard, onWords }),
     speak: (opts) => new Speaker(opts),
     lessons: new Lessons({
       progress, words: new LessonWords(db), complete: modelFor("games"), picture,
@@ -104,7 +104,7 @@ Bun.serve<Data>({
         settings: {
           get: () => ({
             language: memory.child().language, new: memory.isNew(), brightness: memory.child().brightness ?? 100, volume: memory.child().volume ?? 100,
-            theme: memory.child().theme ?? "amber",
+            theme: memory.child().theme ?? "amber", hold: memory.child().hold === true,
           }),
           set: (settings) => memory.set(settings),
           brighten: (percent) => void memory.brighten(percent),

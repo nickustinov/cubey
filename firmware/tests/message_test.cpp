@@ -69,4 +69,6 @@ TEST_CASE("the languages for the grown-ups' menu: Cubey's, and all it speaks") {
     CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"brightness":40})").brightness == 40);
     CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"volume":60})").volume == 60);
     CHECK(s.volume == 0); // not said
+    CHECK(parse_message(R"({"type":"settings","language":"lv","languages":["en"],"hold":true})").hold); // held to talk
+    CHECK_FALSE(s.hold);
 }
