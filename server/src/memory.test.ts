@@ -73,12 +73,22 @@ test("the screen's theme, a grown-up's on the admin page: one Cubey's screens ha
 
 test("a grown-up's edit on the admin page: kept as checked; a field left empty, not known any more", () => {
   const memory = new Memory(file(), "Anna");
-  expect(memory.edit({ name: "Anna Ā.", gender: "girl", birthday: "2023-02-01", language: "en", learns: "lv", parents: "mum", timeZone: "Europe/Riga" }, today))
-    .toMatchObject({ name: "Anna Ā.", ageMonths: 44, language: "en", learns: "lv", parents: "mum", timeZone: "Europe/Riga" });
-  expect(memory.edit({ name: "", gender: "", birthday: "" }, today)).toMatchObject({ id: "Anna", language: "en" });
+  expect(memory.edit({ name: "Anna Ā.", gender: "girl", age: "3", language: "en", learns: "lv", parents: "mum", timeZone: "Europe/Riga" }, today))
+    .toMatchObject({ name: "Anna Ā.", ageMonths: 42, language: "en", learns: "lv", parents: "mum", timeZone: "Europe/Riga" }); // as a child telling it
+  expect(memory.edit({ name: "", gender: "", age: "" }, today)).toMatchObject({ id: "Anna", language: "en" });
   expect(memory.child(today).name).toBeUndefined();
-  expect(memory.edit({ language: "xx", birthday: "soon" }, today)).toMatchObject({ language: "en" }); // what makes no sense, the default
   expect(memory.child(today).ageMonths).toBeUndefined();
+  expect(memory.edit({ language: "xx", age: "soon" }, today)).toMatchObject({ language: "en" }); // what makes no sense, the default
+  expect(memory.child(today).ageMonths).toBeUndefined();
+});
+
+test("an age saved again on the admin page as it was keeps the birthday it was guessed from: it goes on growing as before", () => {
+  const memory = new Memory(file(), "Anna");
+  memory.learn({ age: 3 }, new Date(2026, 0, 6)); // told in January: 3 and a half then
+  const later = new Date(2026, 6, 1);
+  expect(memory.child(later).ageMonths).toBe(47); // still 3 in July
+  expect(memory.edit({ age: "3", name: "Anna" }, later).ageMonths).toBe(47); // not 3 and a half again
+  expect(memory.edit({ age: "5" }, later).ageMonths).toBe(66); // a new age, as told
 });
 
 test("a grown-up's edit of the file is read as written; what makes no sense is left out, or the default", () => {

@@ -42,13 +42,14 @@ export function pronouns(child: Child) {
 // Their age in months, as a 4-year-old's until Cubey knows it (what it says, the word game's words).
 export const monthsOf = (child: Child) => child.ageMonths ?? 48;
 
-// Her age as the prompt says it ("3 years and 8 months"), from her birthday: Cubey speaks to the child she is now;
-// none until it knows.
+// Her age in whole years ("3"), as she or a grown-up tells it; none until Cubey knows it. Kept as a birthday guessed
+// from it, so it grows with her: its months are the guess's, not hers.
+export const yearsOf = (child: Child) => (child.ageMonths === undefined ? undefined : Math.floor(child.ageMonths / 12));
+
+// Her age as the prompts and the admin page say it ("3 years"); none until Cubey knows it.
 export function ageOf(child: Child): string | undefined {
-  if (child.ageMonths === undefined) return undefined;
-  const years = Math.floor(child.ageMonths / 12), months = child.ageMonths % 12;
-  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
-  return months ? `${plural(years, "year")} and ${plural(months, "month")}` : plural(years, "year");
+  const years = yearsOf(child);
+  return years === undefined ? undefined : `${years} year${years === 1 ? "" : "s"}`;
 }
 
 // How much Cubey says at a time, and in what words, for her age.

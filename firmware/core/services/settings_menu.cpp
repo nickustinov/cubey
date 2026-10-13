@@ -28,12 +28,14 @@ SettingsMenu::Event SettingsMenu::keys(const Keys &keys, uint32_t now) {
 SettingsMenu::Event SettingsMenu::offer(uint32_t now) {
     if (!fresh_ || offered_ || open_) return Event::None;
     offered_ = true;
-    return open(now);
+    return opening(now, true);
 }
 
-SettingsMenu::Event SettingsMenu::open(uint32_t now) {
+SettingsMenu::Event SettingsMenu::open(uint32_t now) { return opening(now, false); }
+
+SettingsMenu::Event SettingsMenu::opening(uint32_t now, bool first) {
     if (languages_.empty() || open_) return Event::None;
-    open_ = true, last_ = now;
+    open_ = true, first_ = first, last_ = now;
     return Event::Opened;
 }
 

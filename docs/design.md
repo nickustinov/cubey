@@ -39,7 +39,8 @@ The decisions behind Cubey and why they were made. Read this before changing how
 | The prompt stays short. Each game has one line in it, and its rules are added only while the child plays it (`Playing` in `cubey.ts`). The word game has its own prompt. | Otherwise the prompt grows with every routine. |
 | Cubey knows its routines and now and then offers one when it fits the moment (brushing at bedtime, a game when the child is bored), as a question, starting only after a yes; never one it doesn't have. | A routine offered at the right moment gets used. |
 | A story is told whole in one answer: a beginning, something that happens, a happy end. | Otherwise models tell a sentence and ask a question, over and over. |
-| What Cubey knows of the child is `memory.md` per device (`memory.ts`): name, gender, birthday, the language it speaks and the one it teaches, the household's time zone, brightness and theme. What the child or a grown-up tells it is kept (`child` in the answer); a grown-up can edit it on the admin page. Not known yet, Cubey guesses no gender, speaks as to a 4-year-old and asks the name or age now and then. | A parent sets nothing up. |
+| What Cubey knows of the child is `memory.md` per device (`memory.ts`): name, gender, age, the language it speaks and the one it teaches, the household's time zone, brightness and theme. What the child or a grown-up tells it is kept (`child` in the answer); a grown-up can edit it on the admin page. Not known yet, Cubey guesses no gender, speaks as to a 4-year-old and asks the name or age now and then. | A parent sets nothing up. |
+| An age is in whole years everywhere: as told ("I'm three"), in the prompts, on the admin page (a dropdown, not a date). It is kept as a birthday guessed halfway through that year, so the child grows a year older on their own; saving the same age again keeps the guess. | An age is told in years: "3 years and 6 months" was the guess's months, not the child's. |
 | A child's talks before and word-game progress follow their `id` (their first name as first known), so a new name keeps them. | "Call me Nick" shouldn't wipe what Cubey knows. |
 
 ## Models by job
@@ -81,6 +82,7 @@ What Cubey does besides talk, whenever the child asks in any words: a `routine` 
 
 | Decision | Why |
 | --- | --- |
+| A new Cubey's menu, opened by itself after its Wi-Fi, has only its two languages: their codes three times the font's size under small words, filling the screen, and OK. Theme and brightness keep their defaults until the full menu. | The first thing a parent sets up should be only what it needs. |
 | The menu is hidden from the child: "–" held 5 s opens and closes it. Three lines (the language Cubey speaks, the one it teaches, the theme) stepped by tapping arrows, a brightness slider, OK. On close, changes go to the server, which keeps them and opens the talk anew. | Not by voice for languages: a child could switch them by accident. A both-keys hold was too hard to find. |
 | Wi-Fi is set up on the cube: "+" held 5 s, or by itself when there's no network. A list of networks by signal, and a password on a keyboard of dots (ten keys by four, shift, symbols). The board keeps the network in flash. | Taken to a new home, set up on the cube itself. The power button can't do it: its chip cuts power on a long hold. |
 

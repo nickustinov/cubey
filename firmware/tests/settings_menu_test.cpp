@@ -115,6 +115,16 @@ TEST_CASE("a new Cubey's menu opens by itself, once, when the server first says 
     CHECK(known().offer(100) == Event::None); // one set up before
 }
 
+TEST_CASE("only a new Cubey's menu, opened by itself, is its languages alone; opened by hand or asked for, the whole of it") {
+    SettingsMenu menu;
+    menu.known({"en", "lv"}, {"lv", "en", "amber", 100}, true);
+    REQUIRE(menu.offer(0) == Event::Opened);
+    CHECK(menu.first());
+    menu.confirm();
+    REQUIRE(menu.open(100) == Event::Opened);
+    CHECK_FALSE(menu.first());
+}
+
 TEST_CASE("+ held alone 5 s, the menu closed: the Wi-Fi setup; on the menu, nothing") {
     SettingsMenu menu = known();
     CHECK(hold(menu, true, 0, SettingsMenu::kHoldMs + 30) == Event::Wifi);

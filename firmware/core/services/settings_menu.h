@@ -47,6 +47,7 @@ public:
     Event close();                                     // the power button
 
     bool is_open() const { return open_; }
+    bool first() const { return first_; } // a new Cubey's, opened by itself: only its languages (ui/menu.h)
     const std::string &language() const { return shown_.language; }
     const std::string &learns() const { return shown_.learns; }
     const std::string &theme() const { return shown_.theme; }
@@ -56,7 +57,8 @@ public:
 private:
     std::vector<std::string> languages_, themes_;
     Settings known_, shown_;
-    bool open_ = false, fresh_ = false, offered_ = false;
+    Event opening(uint32_t now, bool first);
+    bool open_ = false, fresh_ = false, offered_ = false, first_ = false;
     bool plus_ = false, minus_ = false; // held at the last call
     uint32_t held_since_ = 0;           // the key held alone, since
     bool fired_ = false;                // this hold has done what it does

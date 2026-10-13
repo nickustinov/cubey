@@ -197,7 +197,7 @@ A freshly flashed cube says "HI!" and opens its Wi-Fi setup: tap to start, pick 
 - the models Cubey thinks with, a dropdown for each job (talk, games, drawing), used from the next turn; a model whose provider key isn't set is greyed out
 - every Cubey, its child, whether it's online, and what it cost today, this month and in all
 - a Cubey's talks, word for word, with the big questions marked
-- its child's name, birthday and languages, its theme and brightness, its name, blocking it
+- its child's name, age and languages, its theme and brightness, its name, blocking it
 - a full reset, which wipes a Cubey on the server and, if it's on, the cube itself
 - where the money goes: by day, by Cubey and by kind (listening, speaking, each model)
 

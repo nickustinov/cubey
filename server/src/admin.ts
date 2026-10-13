@@ -5,7 +5,7 @@
 // page: its talks (its parents' log), its child and settings to change, its name, blocking it, a full reset. The password once, then
 // a cookie only the server can make (an HMAC of the password), HttpOnly, Secure, SameSite=Strict, for 30 days.
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import { ageOf, type Child, LANGUAGE_NAMES, LANGUAGES, PARENTS, THEMES } from "./child";
+import { ageOf, type Child, LANGUAGE_NAMES, LANGUAGES, PARENTS, THEMES, yearsOf } from "./child";
 import type { Device, Fleet } from "./fleet";
 import { LESSON_LANGUAGES, languageName } from "./lesson";
 import { type Job, JOBS, MODELS, type Models } from "./models";
@@ -211,7 +211,6 @@ ${modelsForm()}`);
     const device = fleet.get(id);
     if (!device) return page("Cubey", "<h1>No such Cubey</h1>", 404);
     const child = fleet.memory(id).child(now());
-    const birthday = child.ageMonths === undefined ? "" : (fleet.memory(id).birthday() ?? "");
     const spends = spending.of(id, now());
     const talks = fleet.log(id).read().slice(-50).reverse().map((t) => {
       const at = new Date(t.at).toLocaleString("en-GB", { timeZone: child.timeZone, dateStyle: "medium", timeStyle: "short" });
@@ -225,7 +224,7 @@ ${modelsForm()}`);
 <label>Cubey's name</label><input name="label" value="${h(device.label)}" placeholder="${h(titleOf({ ...device, label: undefined }, child))}">
 <label>Child's name</label><input name="name" value="${h(child.name)}" placeholder="Cubey asks">
 <label>Girl or boy</label>${select("gender", child.gender ?? "", [["", "not known"], ["girl", "girl"], ["boy", "boy"]])}
-<label>Birthday</label><input type="date" name="birthday" value="${h(birthday)}">
+<label>Age</label>${select("age", String(yearsOf(child) ?? ""), [["", "not known"], ...Array.from({ length: 12 }, (_, i): [string, string] => [String(i + 1), `${i + 1} year${i ? "s" : ""}`])])}
 <label>Cubey speaks</label>${select("language", child.language, LANGUAGES.map((l) => [l, LANGUAGE_NAMES[l]]))}
 <label>It teaches</label>${select("learns", child.learns, LESSON_LANGUAGES.map((l) => [l, languageName(l)]))}
 <label>Brightness</label>${select("brightness", String(child.brightness ?? 100), Array.from({ length: 10 }, (_, i) => [String((i + 1) * 10), `${(i + 1) * 10}%`]))}
@@ -246,7 +245,7 @@ ${modelsForm()}`);
     fleet.name(id, field("label"));
     fleet.block(id, form.get("blocked") === "on");
     fleet.memory(id).edit({
-      name: field("name"), gender: field("gender"), birthday: field("birthday"), language: field("language"), learns: field("learns"),
+      name: field("name"), gender: field("gender"), age: field("age"), language: field("language"), learns: field("learns"),
       parents: field("parents"), timeZone: field("timeZone"), brightness: field("brightness"),
       theme: field("theme"),
     }, now());

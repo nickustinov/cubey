@@ -25,10 +25,12 @@ test("her family in Cubey's English instructions", () => {
   expect(parentsOf({ ...unknown, parents: "dads" })).toBe("the child's dads");
 });
 
-test("her age as every prompt says it, and how much Cubey says to a child of it; not known, as to a 4-year-old", () => {
-  expect(ageOf(anna)).toBe("3 years and 6 months");
+// An age is told in years ("I'm three"), so it is said in years: its months would be the guess of a birthday.
+test("her age in whole years, as every prompt and the admin page say it, and how much Cubey says to a child of it; not known, as to a 4-year-old", () => {
+  expect(ageOf(anna)).toBe("3 years");
   expect(ageOf({ ...anna, ageMonths: 48 })).toBe("4 years");
-  expect(ageOf({ ...anna, ageMonths: 25 })).toBe("2 years and 1 month");
+  expect(ageOf({ ...anna, ageMonths: 25 })).toBe("2 years");
+  expect(ageOf({ ...anna, ageMonths: 13 })).toBe("1 year");
   expect(ageOf(unknown)).toBeUndefined();
   expect(speakFor(anna)).toContain("One or two short sentences");
   expect(speakFor(anna)).toContain("a 3-year-old");

@@ -5,7 +5,7 @@
 // Begun as a child not known yet, in the household's time zone (CUBEY_CHILD_TIMEZONE).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import { ageMonths, type Child, type Gender, type Language, LANGUAGES, type Parents, PARENTS, type Theme, THEMES } from "./child";
+import { ageMonths, type Child, type Gender, type Language, LANGUAGES, type Parents, PARENTS, type Theme, THEMES, yearsOf } from "./child";
 import { LESSON_LANGUAGES } from "./lesson";
 
 // setUp: when a grown-up set its languages on its menu (a new Cubey's opens by itself until then).
@@ -35,6 +35,12 @@ const brightnessOf = (given: unknown) => {
   const percent = Number(given);
   return Number.isInteger(percent) && percent >= 10 && percent <= 100 ? percent : undefined;
 };
+
+// The birthday of a child who says they are so many years old: about halfway through that year, the guess least wrong.
+function bornAbout(years: number, today: Date): string {
+  const born = new Date(today.getFullYear() - years, today.getMonth() - 6, today.getDate());
+  return `${born.getFullYear()}-${String(born.getMonth() + 1).padStart(2, "0")}-${String(born.getDate()).padStart(2, "0")}`;
+}
 
 // The fields as given, checked: what makes no sense is left out, or the default.
 function checked(given: Record<string, string | undefined>): Fields {
@@ -69,29 +75,29 @@ export class Memory {
     return { ...fields, ...(birthday && { ageMonths: ageMonths(birthday, today) }) };
   }
 
-  // A name, girl or boy, an age in years (a birthday about halfway through the year it gives).
+  // A name, girl or boy, an age in years.
   learn(learned: Learned, today = new Date()): Child {
     const fields = this.read();
     if (learned.name && learned.name !== fields.name) fields.gender = undefined; // guessed from the name before: anew
     if (learned.name) fields.name = learned.name;
     if (learned.gender) fields.gender = learned.gender;
-    if (learned.age) {
-      const born = new Date(today.getFullYear() - learned.age, today.getMonth() - 6, today.getDate());
-      fields.birthday = `${born.getFullYear()}-${String(born.getMonth() + 1).padStart(2, "0")}-${String(born.getDate()).padStart(2, "0")}`;
-    }
+    if (learned.age) fields.birthday = bornAbout(learned.age, today);
     this.write(fields);
     return this.child(today);
   }
 
-  birthday(): string | undefined {
-    return this.read().birthday;
-  }
-
-  // A grown-up's, on the admin page (admin.ts): what is given replaces what was, checked; an empty one, not known.
-  edit(changes: Partial<Record<"name" | "gender" | "birthday" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "theme", string>>, today = new Date()): Child {
+  // A grown-up's, on the admin page (admin.ts): what is given replaces what was, checked; an empty one, not known. An
+  // age in years, as a child tells it; the same as it was keeps the birthday guessed before, so it grows as it did.
+  edit(changes: Partial<Record<"name" | "gender" | "age" | "language" | "learns" | "parents" | "timeZone" | "brightness" | "theme", string>>, today = new Date()): Child {
     const fields = this.read();
+    const { age, ...rest } = changes;
     const given: Record<string, string | undefined> = { ...fields, brightness: fields.brightness?.toString() };
-    for (const [key, value] of Object.entries(changes)) given[key] = value?.trim() || undefined;
+    for (const [key, value] of Object.entries(rest)) given[key] = value?.trim() || undefined;
+    if (age !== undefined) {
+      const years = Number(age);
+      const told = Number.isInteger(years) && years >= 1 && years <= 12 ? years : undefined;
+      if (told !== yearsOf(this.child(today))) given.birthday = told === undefined ? undefined : bornAbout(told, today);
+    }
     this.write(checked(given));
     return this.child(today);
   }

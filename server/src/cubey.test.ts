@@ -8,7 +8,7 @@ const evening = new Date("2026-10-07T19:40:00Z");
 test("Cubey's prompt: who it is, to whom, in her language, at her age, at her moment of the day", () => {
   const prompt = cubeyPrompt(anna, { earlier: "", now: evening, mode: "live" });
   expect(prompt).toContain("You are Cubey");
-  expect(prompt).toContain("Anna is a girl of 3 years and 6 months");
+  expect(prompt).toContain("Anna is a girl of 3 years.");
   expect(prompt).toContain("Always speak Latvian");
   // On Fly (2026-10-12): set to English on the device, it went on in Latvian, as its talks before were.
   expect(prompt).toContain("Always speak Latvian, even where your talks before were in another language.");
@@ -292,7 +292,7 @@ test("a child it doesn't know yet: no name, girl or boy, or age guessed; it asks
   expect(prompt).toContain('or a grown-up does ("this is Anna, she is three"), or the child wants another name ("I\'m Nick now"), use it from now on and set child to only what you were just told: name (as said on its own, not as in the sentence) with the gender it suggests ({"name": "Nick", "gender": "boy"}), or age in years ({"age": 5}). Nothing guessed: no gender without a name.');
   expect(prompt).toContain('"child": {}');
   const known = cubeyPrompt(anna, { earlier: "", now: evening, mode: "cascade" });
-  expect(known).toContain("Anna is a girl of 3 years and 6 months.");
+  expect(known).toContain("Anna is a girl of 3 years.");
   expect(known).not.toContain("You don't know");
   expect(known).toContain('("I\'m Nick now")'); // she may still want another name
   expect(cubeyPrompt({ ...anna, ageMonths: undefined }, { earlier: "", now: evening, mode: "cascade" })).toContain("You don't know her age yet");
