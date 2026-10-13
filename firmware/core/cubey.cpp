@@ -32,6 +32,7 @@
 #include "ui/menu.h"
 #include "ui/mouth.h"
 #include "ui/picture.h"
+#include "ui/sketch.h"
 #include "ui/spell.h"
 #include "ui/wifi.h"
 
@@ -63,6 +64,9 @@ static uint32_t screen_since = 0, screen_ms = 0;
 constexpr uint32_t kScreenMs = 8000; // ponytail: a few seconds, about its answer's length
 static std::optional<SpellRun> spelling; // a word Cubey spells, its letters as its voice says them
 static lv_obj_t *spell_shown = nullptr;  // in place of its eyes from its first letter, like a drawing
+static lv_obj_t *sketch_shown = nullptr; // a drawing on its way: a sketch forming in place of Cubey's eyes
+static uint32_t sketch_since = 0;
+constexpr uint32_t kSketchMostMs = 30000; // drawings took 5 to 14 s: longer, it came to nothing
 static SettingsMenu settings_menu{dots::themes()}; // the grown-ups' menu: the languages and theme, as the server has them
 static lv_obj_t *menu_shown = nullptr; // over everything while it is open
 static WifiSetup wifi_setup;            // a grown-up joining Cubey to a network
@@ -113,8 +117,8 @@ static bool routine_shown() {
 }
 static void on_power(PowerAction action);
 
-// What Cubey drew, or a word it spells once its first letter shows, in place of its eyes.
-static bool drawing_shown() { return screen_shown || (spelling && spelling->shown(lv_tick_get()) > 0); }
+// What Cubey drew or is drawing, or a word it spells once its first letter shows, in place of its eyes.
+static bool drawing_shown() { return screen_shown || sketch_shown || (spelling && spelling->shown(lv_tick_get()) > 0); }
 
 // Asleep: an empty black screen, the screen off, the talk over (brushing too), the steps seldom.
 static void sleep_screen() {
@@ -128,7 +132,7 @@ static void sleep_screen() {
     dice.reset();
     finding_since.reset();
     spelling.reset();
-    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    eyes_shown = battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -145,7 +149,7 @@ static void wake_screen() {
     hal::screen(true);
     lv_obj_t *scr = new_screen(dots::ground());
     eyes_shown = eyes::create(scr);
-    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = menu_shown = wifi_shown = lost_shown = nullptr;
+    battery_shown = mouth_shown = dial_shown = cards_shown = die_shown = letter_shown = count_shown = screen_shown = spell_shown = sketch_shown = menu_shown = wifi_shown = lost_shown = nullptr;
     lost_since = 0;
     settings_menu.close();
     wifi_setup.close();
@@ -220,6 +224,13 @@ static void end_screen() {
     if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
 }
 
+static void end_sketch() {
+    if (!sketch_shown) return;
+    lv_obj_delete(sketch_shown);
+    sketch_shown = nullptr;
+    if (eyes_shown) lv_obj_set_hidden(eyes_shown, routine_shown() || drawing_shown());
+}
+
 static void end_spell() {
     if (!spell_shown) return;
     lv_obj_delete(spell_shown);
@@ -267,9 +278,10 @@ static PowerAction back() {
         end_menu();
         return PowerAction::None;
     }
-    if (screen_shown || spell_shown) {
+    if (screen_shown || spell_shown || sketch_shown) {
         end_screen();
         end_spell();
+        end_sketch();
         return PowerAction::None;
     }
     if (die_shown) {
@@ -339,6 +351,7 @@ static void show_count(const ServerMessage &msg, uint32_t now) {
 static void show_screen(const ServerMessage &msg, uint32_t now) {
     end_screen();
     end_spell();
+    end_sketch();
     if (routine_shown()) return;
     screen_ms = kScreenMs;
     screen_moves = false;
@@ -360,6 +373,7 @@ static void spell_word(const ServerMessage &msg, uint32_t now) {
     letter::Shown shown = letter::spelling(msg.word);
     if (shown.words.empty()) return;
     end_screen();
+    end_sketch();
     spelling.emplace(static_cast<int>(shown.words.size()) - 1, letter::length(shown.words.back()));
     spell_shown = spell::create(lv_obj_get_parent(eyes_shown), std::move(shown), &*spelling, now);
     lv_obj_set_hidden(spell_shown, true);
@@ -377,6 +391,24 @@ static void follow_spell(uint32_t now) {
     lv_obj_set_hidden(spell_shown, !shows);
     if (shows) lv_obj_set_hidden(eyes_shown, true);
     spell::show(spell_shown, now);
+}
+
+// Cubey has begun to draw something: a sketch forms in place of its eyes until it shows (show_screen), or a spelled
+// word or a routine's picture takes its place, or it comes to nothing. Only over the eyes, as a drawing.
+static void start_sketch(uint32_t now) {
+    if (sketch_shown || routine_shown()) return;
+    end_screen();
+    end_spell();
+    stir(now);
+    sketch_shown = sketch::create(lv_obj_get_parent(eyes_shown), lucky(0x7FFFFFFF), now);
+    sketch_since = now;
+    lv_obj_set_hidden(eyes_shown, true);
+}
+
+static void follow_sketch(uint32_t now) {
+    if (!sketch_shown) return;
+    if (routine_shown() || since(now, sketch_since) >= kSketchMostMs) return end_sketch();
+    sketch::show(sketch_shown, now);
 }
 
 static void follow_screen(uint32_t now) {
@@ -403,6 +435,7 @@ static void server_message(const ServerMessage &msg, const std::string &json, ui
     if (msg.type == "find") finding_since = now;
     if (msg.type == "letter") return show_letter(msg, now);
     if (msg.type == "count") return show_count(msg, now);
+    if (msg.type == "drawing") return start_sketch(now);
     if (msg.type == "show") return show_screen(msg, now);
     if (msg.type == "spell") return spell_word(msg, now);
     if (msg.type == "spell.at") {
@@ -641,6 +674,7 @@ static void step(lv_timer_t *) {
     if (letter_shown) letter::show(letter_shown, now);
     if (count_shown) count::show(count_shown, now);
     follow_screen(now);
+    follow_sketch(now);
     follow_spell(now);
     follow_upright(down, now);
     if (eyes_shown) eyes::set_shut(eyes_shown, !hal::link_connected()); // nobody to talk to

@@ -1,11 +1,11 @@
 // What each service charges, in US dollars, as found on 2026-10-12 (third parties' listings where the providers' own
-// pages weren't found: check them). A model's, per 1M tokens: its input, the input it had cached (part of the input),
+// pages weren't found: check them; Gemini's from ai.google.dev/gemini-api/docs/pricing, 2026-10-13). A model's, per 1M tokens: its input, the input it had cached (part of the input),
 // its output (thinking billed as output).
 export const MODEL_PRICES: Record<string, { input: number; cached: number; output: number }> = {
   "gpt-6-sol": { input: 2, cached: 0.2, output: 10 },
-  "gpt-6.1-sol": { input: 2, cached: 0.1, output: 10 },
   "gpt-6-astra": { input: 10, cached: 1, output: 50 },
   "gemini-3.5-flash-lite": { input: 0.3, cached: 0.03, output: 2.5 },
+  "gemini-3.1-flash-lite": { input: 0.25, cached: 0.025, output: 1.5 },
 };
 // Soniox's, a second of audio: real-time listening about $0.12 an hour, speaking about $0.70 (soniox.com/compare).
 export const AUDIO_PRICES = { listen: 0.12 / 3600, speak: 0.7 / 3600 };

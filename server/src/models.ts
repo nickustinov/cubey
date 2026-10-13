@@ -10,11 +10,11 @@ export type Job = (typeof JOBS)[number];
 export type Key = "GEMINI_API_KEY" | "OPENAI_API_KEY";
 export type Model = { id: string; name: string; key: Key; jobs: readonly Job[] };
 
-// GPT-6 Astra draws best, but takes about 6 s (2026-10-12): drawing only.
+// GPT-6 Astra draws best, but takes about 6 s (2026-10-12): drawing only. GPT-6.1 Sol's first word took 1.1 s: none.
 export const MODELS: Model[] = [
   { id: "gemini-3.5-flash-lite", name: "Gemini 3.5 Flash-Lite", key: "GEMINI_API_KEY", jobs: JOBS },
+  { id: "gemini-3.1-flash-lite", name: "Gemini 3.1 Flash-Lite", key: "GEMINI_API_KEY", jobs: JOBS },
   { id: "gpt-6-sol", name: "GPT-6 Sol", key: "OPENAI_API_KEY", jobs: JOBS },
-  { id: "gpt-6.1-sol", name: "GPT-6.1 Sol", key: "OPENAI_API_KEY", jobs: JOBS },
   { id: "gpt-6-astra", name: "GPT-6 Astra", key: "OPENAI_API_KEY", jobs: ["drawing"] },
 ];
 

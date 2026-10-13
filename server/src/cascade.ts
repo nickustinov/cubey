@@ -249,10 +249,11 @@ class CascadeTalk implements Talk {
 
   // What Cubey shows on its screen, as its answer named it (as soon as it is written): drawn or written by the drawing
   // model, then to the device whenever it is done (in 5 to 14 s it was, often into her next turn); not if another was
-  // asked for since.
+  // asked for since. Until then the device shows a sketch forming; nothing drawn, it shows nothing, and its eyes are back.
   private async draw(what: string) {
     const asked = ++this.drawings, start = Date.now();
     this.drawn = { what };
+    if (!this.closed) this.out.text({ type: "drawing" });
     let drawing: Drawing | undefined;
     try {
       drawing = readDrawing(await this.deps.draw({ system: drawPrompt(this.child, what), messages: [{ role: "user", text: what }], spent: this.spent }));
@@ -262,7 +263,8 @@ class CascadeTalk implements Talk {
     if (drawing) this.deps.log?.(`drew ${what} in ${Date.now() - start} ms${asked === this.drawings ? "" : ", another asked for since"}`);
     if (asked !== this.drawings) return;
     this.drawn = drawing && { what, at: Date.now() };
-    if (drawing && !this.closed) this.out.text(drawing.picture ? { type: "show", rows: drawing.picture } : { type: "show", text: drawing.text });
+    if (this.closed) return;
+    this.out.text(!drawing ? { type: "show" } : drawing.picture ? { type: "show", rows: drawing.picture } : { type: "show", text: drawing.text });
   }
 
   // What its screen shows of its drawing, for the model to know (it told her the sun was there, never drawn).

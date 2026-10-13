@@ -48,7 +48,7 @@ test("its key gone, a chosen model gives way to the job's default, and stays cho
 test("what the admin page offers for a job: each model with whether its key is set, and which key it needs", () => {
   const drawing = models(gemini).offered("drawing");
   expect(drawing.map((o) => [o.model.id, o.available])).toEqual([
-    ["gemini-3.5-flash-lite", true], ["gpt-6-sol", false], ["gpt-6.1-sol", false], ["gpt-6-astra", false],
+    ["gemini-3.5-flash-lite", true], ["gemini-3.1-flash-lite", true], ["gpt-6-sol", false], ["gpt-6-astra", false],
   ]);
   expect(drawing.find((o) => o.model.id === "gpt-6-astra")!.model.key).toBe("OPENAI_API_KEY");
   expect(models(gemini).offered("talk").map((o) => o.model.id)).not.toContain("gpt-6-astra");

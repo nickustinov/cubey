@@ -62,7 +62,7 @@ Now and then, when it fits, Cubey offers something it can do, as a question ("Sh
 | "Let's name words on one letter" | Cubey picks a letter, shows it big and counts the child's words on it, with hints and a new letter every few words |
 | "How do you write 'cat'?", "Let's spell words" | Cubey says the word and spells it letter by letter: each letter lights up big on the screen the moment Cubey says it, then the whole word passes. In the game, Cubey then asks for the next word |
 | "Let's count", "Play how many dots" | 1 to 10 dots show on the screen to count: few at first, more once the child counts easily |
-| "Draw me a cat", "What's 12 plus 34?" | Cubey draws a picture or writes the sum on its screen for a few seconds. Now and then it draws something by itself, as a surprise |
+| "Draw me a cat", "What's 12 plus 34?" | Cubey draws a picture or writes the sum on its screen for a few seconds; while it draws, faint dots come and go on the screen like a sketch forming. Now and then it draws something by itself, as a surprise |
 | "I want to learn English", "Parrot" | The word game: picture cards fill the screen and Cubey teaches words of the language it teaches, step by step. The child answers by saying the word or tapping the right picture. It goes on from where they stopped last time, and ends when they want to stop or ask for something else |
 
 Saying something unrelated while a game with letters, dots or spelling is on ends that game.
@@ -118,7 +118,7 @@ The reasoning behind each choice is in [docs/design.md](docs/design.md).
 - [Bun](https://bun.sh) 1.4 or later
 - API keys:
   - [Soniox](https://soniox.com): speech to text and text to speech.
-  - [Gemini](https://aistudio.google.com) or [OpenAI](https://platform.openai.com), or both: the models Cubey thinks with. Gemini gives Gemini 3.5 Flash-Lite (the default) and speech to speech on Gemini Live (`CUBEY_TALK=live`); OpenAI gives GPT-6 Sol, GPT-6.1 Sol and GPT-6 Astra (the best at drawing).
+  - [Gemini](https://aistudio.google.com) or [OpenAI](https://platform.openai.com), or both: the models Cubey thinks with. Gemini gives Gemini 3.5 Flash-Lite (the default), Gemini 3.1 Flash-Lite and speech to speech on Gemini Live (`CUBEY_TALK=live`); OpenAI gives GPT-6 Sol and GPT-6 Astra (the best at drawing).
 
 **To build a cube:**
 

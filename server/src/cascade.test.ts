@@ -460,6 +460,22 @@ test("a drawing that comes after her next turn has begun shows all the same; one
   expect(t.texts.slice(shown).filter((m) => m.type === "show")).toEqual([{ type: "show", text: "MOON" }]);
 });
 
+test("while it draws, the device shows a sketch forming; a drawing that comes to nothing brings its eyes back", async () => {
+  const t = await talk();
+  const drawing: ((raw: string) => void)[] = [];
+  t.deps.draw = () => new Promise((resolve) => drawing.push(resolve));
+  await t.ask("Uzzīmē kaķi!", json("Zīmēju!", { show: "a cat" }));
+  expect(t.types().slice(-3)).toEqual(["heard", "drawing", "said"]); // as soon as it is named
+  drawing[0]("Sorry, I can't.");
+  await Bun.sleep(5);
+  expect(t.texts.at(-1)).toEqual({ type: "show" }); // nothing to show: the sketch goes
+  t.deps.draw = async () => {
+    throw new Error("busy");
+  };
+  await t.ask("Uzzīmē suni!", json("Zīmēju!", { show: "a dog" }));
+  expect(t.texts.filter((m) => m.type === "show")).toEqual([{ type: "show" }, { type: "show" }]);
+});
+
 test("what each turn spent, for its Cubey's spending: its model's tokens, her audio heard, Cubey's spoken", async () => {
   const t = await talk();
   t.spent.length = 0;

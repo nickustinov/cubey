@@ -9,7 +9,7 @@ import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import type { Spent } from "./prices";
 
 // How little OpenAI's models may reason: none, but for those that take no "none".
-const LEAST_EFFORT: Record<string, string> = { "gpt-6-astra": "low", "gpt-6.1-sol": "low" };
+const LEAST_EFFORT: Record<string, string> = { "gpt-6-astra": "low" };
 
 export type Message = { role: "user" | "assistant"; text: string };
 // onText: the answer as it is written, piece by piece (to speak it before it is all written); spent: its tokens, once

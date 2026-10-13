@@ -61,9 +61,12 @@
 //                                                       it passes
 //                     {"type":"spell.at", i, ms}        the word's letter i is said ms into Cubey's speech (Soniox's
 //                                                       timing); one never timed shows once the speech is over
+//                     {"type":"drawing"}                Cubey has begun to draw or write something: a sketch forms in
+//                                                       place of its eyes until it shows
 //                     {"type":"show", rows? | text?}    Cubey draws or writes, in place of its eyes for a few seconds:
 //                                                       a picture's 24 rows of 24 ('#' lit, '+' dim), or text in the
-//                                                       dot font, still if it fits, else scrolling past
+//                                                       dot font, still if it fits, else scrolling past; neither:
+//                                                       nothing came of it, Cubey's eyes
 //                     {"type":"menu"}, {"type":"wifi"}  a grown-up asked for its menu (languages, theme,
 //                                                       brightness), or its Wi-Fi setup: it opens once Cubey has
 //                                                       spoken, the talk over
