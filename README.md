@@ -123,7 +123,9 @@ The reasoning behind each choice is in [docs/design.md](docs/design.md).
 
 **To build a cube:**
 
-- A [Waveshare ESP32-S3-Touch-AMOLED-2.16](https://www.waveshare.com/esp32-s3-touch-amoled-2.16.htm). The firmware uses its screen, touch, microphones, speaker, accelerometer, battery gauge and buttons.
+<a href="https://www.waveshare.com/product/esp32-related/boards-kits/esp32-s3/esp32-s3-touch-amoled-2.16.htm"><img src="docs/images/waveshare.png" width="220" alt="The Waveshare ESP32-S3-Touch-AMOLED-2.16: a small white cube with a square black screen"></a>
+
+- A [Waveshare ESP32-S3-Touch-AMOLED-2.16](https://www.waveshare.com/product/esp32-related/boards-kits/esp32-s3/esp32-s3-touch-amoled-2.16.htm), the cube Cubey runs on: a 2.16" square AMOLED touch screen in a small case. The firmware uses its screen, touch, microphones, speaker, accelerometer, battery gauge and buttons.
 - [ESP-IDF](https://docs.espressif.com/projects/esp-idf/) 6.1.
 
 **To host the server:** any machine that runs Bun and keeps a small volume. A [Fly.io](https://fly.io) configuration and a Dockerfile are included.
